@@ -303,10 +303,43 @@ function getDashboardData() {
     scoreMap[id].push(total);
   }
 
+  // เฉลี่ยคะแนนดิบแต่ละเกณฑ์ (คอลัมน์ G-K) จากทุกแถวใน Scores — ใช้ทำกราฟสรุปรายเกณฑ์
+  const CRITERIA_COL_OFFSET = 6; // A=0..F=5, G เริ่มที่ index 6
+  const criteriaTotals = CRITERIA.map(function () { return { sum: 0, count: 0 }; });
+  for (let i = 1; i < scoresData.length; i++) {
+    if (!String(scoresData[i][1]).trim()) continue;
+    CRITERIA.forEach(function (c, idx) {
+      const raw = Number(scoresData[i][CRITERIA_COL_OFFSET + idx]);
+      if (!isNaN(raw)) {
+        criteriaTotals[idx].sum += raw;
+        criteriaTotals[idx].count++;
+      }
+    });
+  }
+  const criteriaAverages = CRITERIA.map(function (c, idx) {
+    const t = criteriaTotals[idx];
+    return {
+      key: c.key,
+      label: c.label,
+      weight: c.weight,
+      avg: t.count > 0 ? Math.round((t.sum / t.count) * 100) / 100 : null
+    };
+  });
+
+  // กันรหัสนิสิตซ้ำในชีท Students (เช่น import ผิดพลาด) ไม่ให้นับซ้ำในสถิติ —
+  // ใช้แถวแรกที่เจอ ส่วนรหัสที่ซ้ำจะถูกเก็บชื่อไว้ใน stats.duplicateStudentIds ให้ผู้ดูแลเห็น
   const students = [];
+  const seenIds = {};
+  const duplicateIds = [];
   for (let i = 1; i < studentsData.length; i++) {
     const id = String(studentsData[i][0]).trim();
     if (!id) continue;
+    if (seenIds[id]) {
+      if (duplicateIds.indexOf(id) === -1) duplicateIds.push(id);
+      continue;
+    }
+    seenIds[id] = true;
+
     const room = studentsData[i][2];
     const term = studentsData[i][3];
     const totals = scoreMap[id] || [];
@@ -359,9 +392,11 @@ function getDashboardData() {
       evaluatedFull: evaluatedFull,
       evaluatedPartial: evaluatedPartial,
       notEvaluated: notEvaluated,
-      overallAverage: avgOf(allAverages)
+      overallAverage: avgOf(allAverages),
+      duplicateStudentIds: duplicateIds
     },
     byRoom: byRoom,
+    criteriaAverages: criteriaAverages,
     students: students
   };
 }

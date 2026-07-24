@@ -29,6 +29,9 @@
     --card: #ffffff;
     --danger: #c0392b;
     --danger-bg: #fdecea;
+    --warn: #8a6d1a;
+    --warn-bg: #fff3cd;
+    --warn-border: #f0dfa0;
     --radius-lg: 18px;
     --radius-md: 12px;
     --radius-sm: 9px;
@@ -133,6 +136,22 @@
   .avg-cell { font-weight: 700; color: var(--ku-green-800); }
   .avg-cell.empty { color: var(--ink-400); font-weight: 500; }
   .no-results { text-align: center; color: var(--ink-400); padding: 20px; font-size: 13px; }
+  .dup-warning {
+    background: var(--warn-bg); color: var(--warn); border: 1px solid var(--warn-border);
+    border-radius: var(--radius-md); padding: 12px 16px; margin-bottom: 14px; font-size: 13px;
+  }
+  th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+  th.sortable:hover { color: var(--ku-green-700); }
+  .sort-arrow { display: inline-block; width: 10px; font-size: 10px; color: var(--ku-green-600); }
+  .pagination {
+    display: flex; align-items: center; justify-content: center; gap: 14px;
+    margin-top: 16px; font-size: 13px; color: var(--ink-600);
+  }
+  .page-btn {
+    background: var(--card); border: 1.5px solid var(--border); color: var(--ku-green-700);
+    font-weight: 700; font-size: 13px; padding: 6px 14px; border-radius: 20px; cursor: pointer;
+  }
+  .page-btn:disabled { color: var(--ink-400); border-color: var(--border); cursor: default; opacity: .5; }
 </style>
 </head>
 <body>
@@ -169,11 +188,18 @@
         <button class="refresh-btn" id="refreshBtn">↻ รีเฟรช</button>
       </div>
 
+      <div class="dup-warning" id="dupWarning" style="display:none;"></div>
+
       <div class="stat-grid" id="statGrid"></div>
 
       <div class="card">
         <h2>คะแนนเฉลี่ยแยกตามห้องสอบ/แผนการเรียน</h2>
         <div id="roomChart"></div>
+      </div>
+
+      <div class="card">
+        <h2>คะแนนเฉลี่ยแยกตามเกณฑ์การประเมิน</h2>
+        <div id="criteriaChart"></div>
       </div>
 
       <div class="card">
@@ -183,16 +209,17 @@
           <table>
             <thead>
               <tr>
-                <th>นิสิต</th>
-                <th>ห้อง/แผน</th>
-                <th>กรรมการ</th>
-                <th>เฉลี่ย</th>
+                <th class="sortable" data-sort="name">นิสิต<span class="sort-arrow"></span></th>
+                <th class="sortable" data-sort="room">ห้อง/แผน<span class="sort-arrow"></span></th>
+                <th class="sortable" data-sort="count">กรรมการ<span class="sort-arrow"></span></th>
+                <th class="sortable" data-sort="avg">เฉลี่ย<span class="sort-arrow"></span></th>
               </tr>
             </thead>
             <tbody id="studentTbody"></tbody>
           </table>
           <div class="no-results" id="noResults" style="display:none;">ไม่พบรายชื่อที่ค้นหา</div>
         </div>
+        <div class="pagination" id="pagination"></div>
       </div>
     </div>
   </main>
@@ -277,9 +304,13 @@
         document.getElementById('dashboardContent').style.display = 'block';
         document.getElementById('updatedLabel').textContent = 'อัปเดตล่าสุด ' + new Date().toLocaleTimeString('th-TH');
         renderStats(data.stats);
+        renderDupWarning(data.stats.duplicateStudentIds);
         renderRoomChart(data.byRoom);
+        renderCriteriaChart(data.criteriaAverages);
         allStudents = data.students || [];
-        renderTable(allStudents);
+        currentPage = 1;
+        applyFilterSort();
+        renderTablePage();
       })
       .catch(function (err) {
         document.getElementById('loadingMsg').style.display = 'none';
@@ -305,6 +336,34 @@
       div.className = 'stat-tile' + (t.cls ? ' ' + t.cls : '');
       div.innerHTML = '<div class="label">' + t.label + '</div><div class="value">' + t.value + '</div>';
       grid.appendChild(div);
+    });
+  }
+
+  function renderDupWarning(dupIds) {
+    const el = document.getElementById('dupWarning');
+    if (!dupIds || dupIds.length === 0) { el.style.display = 'none'; return; }
+    el.textContent = '⚠️ พบรหัสนิสิตซ้ำในชีท Students (นับครั้งเดียวในสถิติ ใช้ข้อมูลแถวแรก): ' + dupIds.join(', ');
+    el.style.display = 'block';
+  }
+
+  function renderCriteriaChart(criteriaAverages) {
+    const wrap = document.getElementById('criteriaChart');
+    wrap.innerHTML = '';
+    if (!criteriaAverages || criteriaAverages.length === 0) {
+      wrap.innerHTML = '<div class="no-results">ยังไม่มีข้อมูลคะแนน</div>';
+      return;
+    }
+    criteriaAverages.forEach(function (c) {
+      const pct = c.avg !== null ? Math.max(0, Math.min(100, c.avg / 4 * 100)) : 0;
+      const row = document.createElement('div');
+      row.className = 'bar-row';
+      row.innerHTML =
+        '<div class="bar-row-head">' +
+          '<span class="label">' + c.label + ' <span class="count">(น้ำหนัก ' + c.weight + ')</span></span>' +
+          '<span class="value">' + (c.avg !== null ? c.avg + '/4' : '-') + '</span>' +
+        '</div>' +
+        '<div class="bar-track"><div class="bar-fill" style="width:' + pct + '%"></div></div>';
+      wrap.appendChild(row);
     });
   }
 
@@ -366,13 +425,71 @@
     });
   }
 
-  document.getElementById('searchInput').addEventListener('input', function () {
-    const q = this.value.trim().toLowerCase();
-    if (!q) { renderTable(allStudents); return; }
-    const filtered = allStudents.filter(function (s) {
+  // ---------- ค้นหา + จัดเรียง + แบ่งหน้า ----------
+  let currentFiltered = [];
+  let sortKey = null;
+  let sortDir = 1;
+  let currentPage = 1;
+  const PAGE_SIZE = 10;
+
+  function applyFilterSort() {
+    const q = document.getElementById('searchInput').value.trim().toLowerCase();
+    let list = !q ? allStudents.slice() : allStudents.filter(function (s) {
       return (s.id + s.name + (s.topic || '')).toLowerCase().indexOf(q) !== -1;
     });
-    renderTable(filtered);
+    if (sortKey) {
+      list.sort(function (a, b) {
+        let av, bv;
+        if (sortKey === 'room') { av = a.room + '|' + a.term; bv = b.room + '|' + b.term; }
+        else if (sortKey === 'avg') { av = a.avg === null ? -1 : a.avg; bv = b.avg === null ? -1 : b.avg; }
+        else { av = a[sortKey]; bv = b[sortKey]; }
+        if (typeof av === 'string') av = av.toLowerCase();
+        if (typeof bv === 'string') bv = bv.toLowerCase();
+        if (av < bv) return -1 * sortDir;
+        if (av > bv) return 1 * sortDir;
+        return 0;
+      });
+    }
+    currentFiltered = list;
+  }
+
+  function renderTablePage() {
+    const totalPages = Math.max(1, Math.ceil(currentFiltered.length / PAGE_SIZE));
+    if (currentPage > totalPages) currentPage = totalPages;
+    const start = (currentPage - 1) * PAGE_SIZE;
+    renderTable(currentFiltered.slice(start, start + PAGE_SIZE));
+    renderPagination(totalPages);
+  }
+
+  function renderPagination(totalPages) {
+    const el = document.getElementById('pagination');
+    if (currentFiltered.length === 0) { el.innerHTML = ''; return; }
+    el.innerHTML =
+      '<button class="page-btn" id="prevPage"' + (currentPage <= 1 ? ' disabled' : '') + '>← ก่อนหน้า</button>' +
+      '<span>หน้า ' + currentPage + ' / ' + totalPages + ' (' + currentFiltered.length + ' คน)</span>' +
+      '<button class="page-btn" id="nextPage"' + (currentPage >= totalPages ? ' disabled' : '') + '>ถัดไป →</button>';
+    const prevBtn = document.getElementById('prevPage');
+    const nextBtn = document.getElementById('nextPage');
+    if (prevBtn) prevBtn.addEventListener('click', function () { currentPage--; renderTablePage(); });
+    if (nextBtn) nextBtn.addEventListener('click', function () { currentPage++; renderTablePage(); });
+  }
+
+  document.getElementById('searchInput').addEventListener('input', function () {
+    currentPage = 1;
+    applyFilterSort();
+    renderTablePage();
+  });
+
+  document.querySelectorAll('th.sortable').forEach(function (th) {
+    th.addEventListener('click', function () {
+      const key = th.getAttribute('data-sort');
+      if (sortKey === key) { sortDir *= -1; } else { sortKey = key; sortDir = 1; }
+      document.querySelectorAll('th.sortable .sort-arrow').forEach(function (a) { a.textContent = ''; });
+      th.querySelector('.sort-arrow').textContent = sortDir === 1 ? '▲' : '▼';
+      currentPage = 1;
+      applyFilterSort();
+      renderTablePage();
+    });
   });
 
   document.getElementById('refreshBtn').addEventListener('click', function () { loadDashboard(false); });

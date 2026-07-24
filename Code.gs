@@ -223,24 +223,15 @@ function getStudentById(studentId) {
  * จะเขียนทับแถวเดิมแทนการเพิ่มแถวใหม่)
  *
  * payload = {
- *   idToken, studentId, studentName, room, term,
+ *   studentId, studentName, room, term, evaluatorName,
  *   scores: { c1: 0-4, c2: 0-4, c3: 0-4, c4: 0-4, c5: 0-4 }
  * }
  *
- * ชื่อกรรมการ "ไม่ได้เชื่อ" จาก client — ต้องตรวจสอบ idToken ก่อนเสมอ แล้วค้นหาชื่อ
- * จากอีเมลที่ยืนยันแล้วในชีท Committees เท่านั้น กันไม่ให้ใครสวมชื่อกรรมการคนอื่น
+ * หมายเหตุ: เวอร์ชันนี้ "เชื่อ" ชื่อกรรมการที่ส่งมาจาก client ตรงๆ (ปิดระบบ
+ * ยืนยันตัวตนกรรมการด้วย Google login ไว้ก่อนตามที่ขอ — ถ้าจะเปิดใหม่
+ * ดูฟังก์ชัน getMyEvaluatorInfo / findEvaluatorByEmail ที่ยังเก็บไว้เผื่อใช้)
  */
 function submitScore(payload) {
-  const auth = verifyGoogleIdTokenRaw(payload.idToken);
-  if (!auth.ok) {
-    return { status: 'error', message: 'ยืนยันตัวตนไม่สำเร็จ กรุณาเข้าสู่ระบบใหม่ (' + (auth.reason || 'unknown') + ')' };
-  }
-  const match = findEvaluatorByEmail(auth.email);
-  if (!match) {
-    return { status: 'error', message: 'บัญชี ' + auth.email + ' ไม่ได้เป็นกรรมการที่ลงทะเบียนไว้ในชีท Committees' };
-  }
-  const evaluatorName = match.name;
-
   const sheet = getSS().getSheetByName('Scores');
   const data = sheet.getDataRange().getValues();
 
@@ -259,14 +250,14 @@ function submitScore(payload) {
     payload.studentName,
     payload.room,
     payload.term,
-    evaluatorName
+    payload.evaluatorName
   ].concat(rawValues).concat([total]);
 
   // หาแถวเดิมของกรรมการท่านนี้ + นิสิตคนนี้ (คอลัมน์ B=รหัสนิสิต, F=ชื่อกรรมการ)
   let existingRow = -1;
   for (let i = 1; i < data.length; i++) {
     if (String(data[i][1]).trim() === String(payload.studentId).trim() &&
-        String(data[i][5]).trim() === String(evaluatorName).trim()) {
+        String(data[i][5]).trim() === String(payload.evaluatorName).trim()) {
       existingRow = i + 1;
       break;
     }

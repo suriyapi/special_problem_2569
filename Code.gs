@@ -36,8 +36,8 @@ const SCALE_LABELS = {
 
 // เข้าถึงหน้า dashboard ได้เฉพาะบัญชี Google นี้เท่านั้น (ตรวจสอบจริงฝั่ง server ด้วย verifyGoogleIdToken)
 const DASHBOARD_ALLOWED_EMAIL = 'suriya.p@ku.th';
-// ต้องตรงกับ GOOGLE_CLIENT_ID ใน dashboard.html (OAuth 2.0 Client ID จาก Google Cloud Console)
-const DASHBOARD_GOOGLE_CLIENT_ID = '992775338655-41i4ftusliminfbr35i31cj20n7lpd12.apps.googleusercontent.com';
+// ใช้ Client ID เดียวกันทั้ง index.html และ dashboard.html (OAuth 2.0 Client ID จาก Google Cloud Console)
+const WEBAPP_GOOGLE_CLIENT_ID = '992775338655-41i4ftusliminfbr35i31cj20n7lpd12.apps.googleusercontent.com';
 
 function doGet(e) {
   const action = e && e.parameter && e.parameter.action;
@@ -51,6 +51,9 @@ function doGet(e) {
   }
   if (action === 'getCriteria') {
     return jsonOutput({ criteria: CRITERIA, scaleLabels: SCALE_LABELS });
+  }
+  if (action === 'getMyEvaluatorInfo') {
+    return jsonOutput(getMyEvaluatorInfo(e.parameter.idToken));
   }
   if (action === 'getDashboard') {
     const auth = verifyGoogleIdToken(e.parameter.idToken);
@@ -94,10 +97,11 @@ function jsonOutput(obj) {
 /**
  * ตรวจสอบ Google ID token (จาก Google Identity Services ฝั่งหน้าเว็บ) ผ่าน
  * Google tokeninfo endpoint — Google เป็นผู้ตรวจลายเซ็นและวันหมดอายุให้ฝั่งเรา
- * (ไม่ต้องเขียนโค้ด verify JWT เอง) จากนั้นเช็คว่าอีเมลตรงกับผู้ที่อนุญาตไว้เท่านั้น
- * คืนค่า { ok: boolean, email: string|undefined }
+ * (ไม่ต้องเขียนโค้ด verify JWT เอง) ยืนยันแค่ว่า token ถูกต้องและออกให้แอปเรา
+ * ไม่ได้เช็คว่าเป็นใครที่ "มีสิทธิ์" — ผู้เรียกต้องเช็คอีเมลที่ได้ต่อเอง
+ * คืนค่า { ok: boolean, email: string|undefined, reason: string|undefined }
  */
-function verifyGoogleIdToken(idToken) {
+function verifyGoogleIdTokenRaw(idToken) {
   if (!idToken) return { ok: false, reason: 'no_token' };
   try {
     const res = UrlFetchApp.fetch(
@@ -109,19 +113,62 @@ function verifyGoogleIdToken(idToken) {
     }
     const info = JSON.parse(res.getContentText());
 
-    if (info.aud !== DASHBOARD_GOOGLE_CLIENT_ID) {
-      return { ok: false, email: info.email, reason: 'aud_mismatch: got=' + info.aud + ' expected=' + DASHBOARD_GOOGLE_CLIENT_ID };
+    if (info.aud !== WEBAPP_GOOGLE_CLIENT_ID) {
+      return { ok: false, email: info.email, reason: 'aud_mismatch: got=' + info.aud + ' expected=' + WEBAPP_GOOGLE_CLIENT_ID };
     }
     if (info.email_verified !== 'true' && info.email_verified !== true) {
       return { ok: false, email: info.email, reason: 'email_not_verified' };
-    }
-    if (String(info.email || '').toLowerCase() !== DASHBOARD_ALLOWED_EMAIL.toLowerCase()) {
-      return { ok: false, email: info.email, reason: 'email_mismatch' };
     }
     return { ok: true, email: info.email };
   } catch (err) {
     return { ok: false, reason: 'exception: ' + err.message };
   }
+}
+
+/** ตรวจสอบ token + จำกัดให้เฉพาะบัญชีที่ได้รับอนุญาตดู dashboard เท่านั้น */
+function verifyGoogleIdToken(idToken) {
+  const base = verifyGoogleIdTokenRaw(idToken);
+  if (!base.ok) return base;
+  if (String(base.email || '').toLowerCase() !== DASHBOARD_ALLOWED_EMAIL.toLowerCase()) {
+    return { ok: false, email: base.email, reason: 'email_mismatch' };
+  }
+  return base;
+}
+
+/**
+ * เรียกจากหน้าให้คะแนน: ตรวจสอบ token แล้วหาว่าอีเมลนี้ตรงกับกรรมการคนไหน
+ * ในชีท Committees (คอลัมน์ D = อีเมล) — ชื่อกรรมการที่ได้มาจากตรงนี้เท่านั้น
+ * ที่นำไปใช้บันทึกคะแนนได้ (submitScore ไม่เชื่อชื่อที่ส่งมาจาก client)
+ */
+function getMyEvaluatorInfo(idToken) {
+  const auth = verifyGoogleIdTokenRaw(idToken);
+  if (!auth.ok) return { ok: false, reason: auth.reason };
+
+  const match = findEvaluatorByEmail(auth.email);
+  if (!match) {
+    return { ok: false, reason: 'not_committee_member', email: auth.email };
+  }
+  return { ok: true, email: auth.email, name: match.name, assignments: match.assignments };
+}
+
+/** ค้นหากรรมการจากอีเมล (คอลัมน์ D ของชีท Committees) คืนชื่อ + (แผนการเรียน+ห้องสอบ) ทุกแถวที่ตรง */
+function findEvaluatorByEmail(email) {
+  const sheet = getSS().getSheetByName('Committees');
+  const data = sheet.getDataRange().getValues();
+  const target = String(email || '').trim().toLowerCase();
+  if (!target) return null;
+
+  let name = null;
+  const assignments = [];
+  for (let i = 1; i < data.length; i++) {
+    const rowEmail = String(data[i][3] || '').trim().toLowerCase();
+    if (rowEmail && rowEmail === target) {
+      name = String(data[i][2]).trim();
+      assignments.push({ term: data[i][0], room: data[i][1] });
+    }
+  }
+  if (!name) return null;
+  return { name: name, assignments: assignments };
 }
 
 function include(filename) {
@@ -176,11 +223,24 @@ function getStudentById(studentId) {
  * จะเขียนทับแถวเดิมแทนการเพิ่มแถวใหม่)
  *
  * payload = {
- *   studentId, studentName, room, term, evaluatorName,
+ *   idToken, studentId, studentName, room, term,
  *   scores: { c1: 0-4, c2: 0-4, c3: 0-4, c4: 0-4, c5: 0-4 }
  * }
+ *
+ * ชื่อกรรมการ "ไม่ได้เชื่อ" จาก client — ต้องตรวจสอบ idToken ก่อนเสมอ แล้วค้นหาชื่อ
+ * จากอีเมลที่ยืนยันแล้วในชีท Committees เท่านั้น กันไม่ให้ใครสวมชื่อกรรมการคนอื่น
  */
 function submitScore(payload) {
+  const auth = verifyGoogleIdTokenRaw(payload.idToken);
+  if (!auth.ok) {
+    return { status: 'error', message: 'ยืนยันตัวตนไม่สำเร็จ กรุณาเข้าสู่ระบบใหม่ (' + (auth.reason || 'unknown') + ')' };
+  }
+  const match = findEvaluatorByEmail(auth.email);
+  if (!match) {
+    return { status: 'error', message: 'บัญชี ' + auth.email + ' ไม่ได้เป็นกรรมการที่ลงทะเบียนไว้ในชีท Committees' };
+  }
+  const evaluatorName = match.name;
+
   const sheet = getSS().getSheetByName('Scores');
   const data = sheet.getDataRange().getValues();
 
@@ -199,14 +259,14 @@ function submitScore(payload) {
     payload.studentName,
     payload.room,
     payload.term,
-    payload.evaluatorName
+    evaluatorName
   ].concat(rawValues).concat([total]);
 
   // หาแถวเดิมของกรรมการท่านนี้ + นิสิตคนนี้ (คอลัมน์ B=รหัสนิสิต, F=ชื่อกรรมการ)
   let existingRow = -1;
   for (let i = 1; i < data.length; i++) {
     if (String(data[i][1]).trim() === String(payload.studentId).trim() &&
-        String(data[i][5]).trim() === String(payload.evaluatorName).trim()) {
+        String(data[i][5]).trim() === String(evaluatorName).trim()) {
       existingRow = i + 1;
       break;
     }
@@ -333,8 +393,10 @@ function setupSheets() {
   let committees = ss.getSheetByName('Committees');
   if (!committees) committees = ss.insertSheet('Committees');
   committees.clear();
-  committees.getRange(1, 1, 1, 3).setValues([
-    ['แผนการเรียน', 'ห้องสอบ', 'ชื่อกรรมการ']
+  // หมายเหตุ: คอลัมน์ D "อีเมล" ถูกเพิ่มด้วยมือทีหลัง (ไม่ได้อยู่ใน setup เดิม) —
+  // ใช้ผูกตัวตนกรรมการกับ Google account ตอน sign-in ใน findEvaluatorByEmail()
+  committees.getRange(1, 1, 1, 4).setValues([
+    ['แผนการเรียน', 'ห้องสอบ', 'ชื่อกรรมการ', 'อีเมล']
   ]);
   committees.setFrozenRows(1);
 

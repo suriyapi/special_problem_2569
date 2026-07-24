@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root {
     --ku-green-900: #123319;
@@ -106,6 +107,15 @@
     display: inline-block; margin-top: 8px; padding: 6px 14px; background: var(--ku-green-100);
     color: var(--ku-green-800); border-radius: 20px; font-size: 13px; font-weight: 700;
   }
+  .gate-title { font-size: 15px; font-weight: 700; color: var(--ink-900); margin-bottom: 6px; text-align: center; }
+  .gate-sub { font-size: 13px; color: var(--ink-400); margin-bottom: 16px; text-align: center; }
+  .gsi-btn-wrap { display: flex; justify-content: center; }
+  .gate-err {
+    background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger-border);
+    border-radius: var(--radius-md); padding: 12px 14px; margin-top: 14px; font-size: 13px;
+    text-align: center; display: none;
+  }
+  .gate-err.show { display: block; }
   .change-link {
     font-size: 13px; color: var(--ku-green-700); text-decoration: underline; cursor: pointer; margin-left: 8px;
     font-weight: 600;
@@ -223,22 +233,18 @@
   </div>
 
   <div class="card" id="evaluatorCard">
-    <h1>เลือกชื่อกรรมการ</h1>
-    <p class="sub">ระบบให้คะแนนหมวดข้อเสนอหัวข้อ — เต็ม 10 คะแนน</p>
-
-    <label>คุณคือกรรมการท่านใด</label>
-    <select id="evaluatorSelect">
-      <option value="">-- กำลังโหลดรายชื่อ... --</option>
-    </select>
-    <input type="text" id="evaluatorOther" placeholder="พิมพ์ชื่อ-สกุล" style="display:none; margin-top:8px;">
-    <div id="evaluatorAssignment"></div>
+    <div class="gate-title">🔒 เข้าสู่ระบบด้วยบัญชี Google ของกรรมการ</div>
+    <div class="gate-sub">ระบบให้คะแนนหมวดข้อเสนอหัวข้อ — เต็ม 10 คะแนน<br>ใช้ยืนยันตัวตนกรรมการก่อนบันทึกคะแนนทุกครั้ง</div>
+    <div id="gsiButton" class="gsi-btn-wrap"></div>
+    <div class="gate-err" id="gateErr"></div>
   </div>
 
   <div class="card" id="mainCard" style="display:none;">
     <div>
       <span class="evaluator-badge" id="currentEvaluatorBadge"></span>
-      <span class="change-link" id="changeEvaluatorLink">เปลี่ยนกรรมการ</span>
+      <span class="change-link" id="changeEvaluatorLink">ออกจากระบบ / เปลี่ยนบัญชี</span>
     </div>
+    <div id="evaluatorAssignment"></div>
 
     <label>รหัสนิสิต</label>
     <input type="tel" id="studentIdInput" inputmode="numeric" placeholder="พิมพ์รหัสนิสิต 10 หลัก" maxlength="10" autofocus>
@@ -285,13 +291,14 @@
   ];
   const SCALE_LABELS = { 0: 'ไม่ผ่าน', 1: 'ต้องปรับปรุง', 2: 'พอใช้', 3: 'ดี', 4: 'ดีเยี่ยม' };
 
+  // ใช้ Client ID เดียวกับ dashboard.html (OAuth 2.0 Client ID จาก Google Cloud Console)
+  const GOOGLE_CLIENT_ID = '992775338655-41i4ftusliminfbr35i31cj20n7lpd12.apps.googleusercontent.com';
+
   let currentScores = {};
   let currentStudent = null;
-  let evaluators = [];
+  let currentIdToken = null;
   let selectedEvaluatorName = '';
   let selectedEvaluatorAssignments = [];
-
-  const STORAGE_KEY = 'proposal_scoring_evaluator_name';
 
   if (GAS_URL.indexOf('YOUR_DEPLOYMENT_ID') !== -1) {
     document.getElementById('configWarning').classList.add('show');
@@ -344,64 +351,58 @@
 
   renderCriteria();
 
-  // ---------- เรียก API: โหลดรายชื่อกรรมการ ----------
-  fetch(GAS_URL + '?action=getEvaluators')
-    .then(function (res) { return res.json(); })
-    .then(function (result) {
-      evaluators = result;
-      const sel = document.getElementById('evaluatorSelect');
-      sel.innerHTML = '<option value="">-- เลือกชื่อของคุณ --</option>';
-      evaluators.forEach(function (ev) {
-        const opt = document.createElement('option');
-        opt.value = ev.name;
-        opt.textContent = ev.name;
-        sel.appendChild(opt);
-      });
-      const otherOpt = document.createElement('option');
-      otherOpt.value = '__other__';
-      otherOpt.textContent = 'อื่นๆ (พิมพ์ชื่อเอง)';
-      sel.appendChild(otherOpt);
-
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const found = evaluators.find(function (ev) { return ev.name === saved; });
-        if (found) {
-          sel.value = saved;
-          selectEvaluator(saved, found.assignments);
-        } else {
-          sel.value = '__other__';
-          document.getElementById('evaluatorOther').style.display = 'block';
-          document.getElementById('evaluatorOther').value = saved;
-          selectEvaluator(saved, []);
-        }
-      }
-    })
-    .catch(function (err) {
-      showMsg('โหลดรายชื่อกรรมการไม่สำเร็จ: ' + err.message + ' (ตรวจสอบ GAS_URL และการ Deploy)', 'err');
-    });
-
-  document.getElementById('evaluatorSelect').addEventListener('change', function () {
-    const val = this.value;
-    const otherInput = document.getElementById('evaluatorOther');
-    if (val === '__other__') {
-      otherInput.style.display = 'block';
-      otherInput.focus();
-    } else if (val) {
-      otherInput.style.display = 'none';
-      const found = evaluators.find(function (ev) { return ev.name === val; });
-      selectEvaluator(val, found ? found.assignments : []);
+  // ---------- Google Sign-In ----------
+  // ยืนยันตัวตนกรรมการจริงเกิดที่ Code.gs (ตรวจ token กับ Google + ค้นชื่อจากอีเมลใน
+  // ชีท Committees) ส่วนนี้แค่แสดงปุ่มและพาไปหน้าหลักเมื่อยืนยันผ่านแล้วเท่านั้น
+  window.addEventListener('load', function () {
+    if (!window.google || !google.accounts || !google.accounts.id) {
+      showGateError('โหลด Google Sign-In ไม่สำเร็จ (เช็คการเชื่อมต่ออินเทอร์เน็ต)');
+      return;
     }
+    google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: handleCredentialResponse
+    });
+    google.accounts.id.renderButton(document.getElementById('gsiButton'), {
+      theme: 'outline', size: 'large', text: 'signin_with', locale: 'th'
+    });
   });
 
-  document.getElementById('evaluatorOther').addEventListener('change', function () {
-    selectEvaluator(this.value.trim(), []);
-  });
+  function handleCredentialResponse(response) {
+    currentIdToken = response.credential;
+    hideGateError();
+    fetch(GAS_URL + '?action=getMyEvaluatorInfo&idToken=' + encodeURIComponent(currentIdToken))
+      .then(function (res) { return res.json(); })
+      .then(function (result) {
+        if (!result.ok) {
+          currentIdToken = null;
+          showGateError(
+            result.reason === 'not_committee_member'
+              ? 'บัญชี ' + (result.email || '') + ' ไม่ได้เป็นกรรมการที่ลงทะเบียนไว้ กรุณาติดต่อผู้ดูแลระบบ'
+              : 'เข้าสู่ระบบไม่สำเร็จ' + (result.reason ? ' [' + result.reason + ']' : '')
+          );
+          return;
+        }
+        selectEvaluator(result.name, result.assignments);
+      })
+      .catch(function (err) {
+        currentIdToken = null;
+        showGateError('ตรวจสอบสิทธิ์ไม่สำเร็จ: ' + err.message);
+      });
+  }
+
+  function showGateError(text) {
+    const el = document.getElementById('gateErr');
+    el.textContent = text;
+    el.classList.add('show');
+  }
+  function hideGateError() {
+    document.getElementById('gateErr').classList.remove('show');
+  }
 
   function selectEvaluator(name, assignments) {
-    if (!name) return;
     selectedEvaluatorName = name;
     selectedEvaluatorAssignments = assignments;
-    localStorage.setItem(STORAGE_KEY, name);
 
     document.getElementById('currentEvaluatorBadge').textContent = name;
     const assignEl = document.getElementById('evaluatorAssignment');
@@ -435,6 +436,13 @@
   }
 
   document.getElementById('changeEvaluatorLink').addEventListener('click', function () {
+    currentIdToken = null;
+    selectedEvaluatorName = '';
+    selectedEvaluatorAssignments = [];
+    if (window.google && google.accounts && google.accounts.id) {
+      google.accounts.id.disableAutoSelect();
+    }
+    hideGateError();
     document.getElementById('mainCard').style.display = 'none';
     document.getElementById('evaluatorCard').style.display = 'block';
   });
@@ -494,7 +502,7 @@
 
   // ---------- เรียก API: บันทึกคะแนน ----------
   document.getElementById('submitBtn').addEventListener('click', function () {
-    if (!selectedEvaluatorName) { showMsg('กรุณาเลือกชื่อกรรมการก่อน', 'err'); return; }
+    if (!currentIdToken) { showMsg('กรุณาเข้าสู่ระบบก่อน', 'err'); return; }
     if (!currentStudent) { showMsg('กรุณาพิมพ์รหัสนิสิตให้ถูกต้องก่อน', 'err'); return; }
     const missing = CRITERIA.filter(function (c) { return currentScores[c.key] === undefined; });
     if (missing.length > 0) {
@@ -507,11 +515,11 @@
     btn.textContent = 'กำลังบันทึก...';
 
     const payload = {
+      idToken: currentIdToken,
       studentId: currentStudent.id,
       studentName: currentStudent.name,
       room: currentStudent.room,
       term: currentStudent.term,
-      evaluatorName: selectedEvaluatorName,
       scores: currentScores
     };
 

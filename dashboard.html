@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#2f7d32">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8C%BF%3C/text%3E%3C/svg%3E">
+<title>แดชบอร์ดสรุปผล - ปัญหาพิเศษ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  :root {
+    --ku-green-900: #123319;
+    --ku-green-800: #1c4d24;
+    --ku-green-700: #2f7d32;
+    --ku-green-600: #3f9142;
+    --ku-green-500: #4c9a2a;
+    --ku-green-100: #e6f4e1;
+    --ku-green-50: #f3f9f0;
+    --ku-gold-600: #b8860b;
+    --ku-gold-100: #faf3d9;
+    --ink-900: #16231a;
+    --ink-600: #4c5c50;
+    --ink-400: #7c8c80;
+    --border: #dbe6d8;
+    --bg: #f2f6f1;
+    --card: #ffffff;
+    --danger: #c0392b;
+    --danger-bg: #fdecea;
+    --radius-lg: 18px;
+    --radius-md: 12px;
+    --radius-sm: 9px;
+    --shadow-card: 0 2px 10px rgba(18,51,25,0.08), 0 1px 3px rgba(18,51,25,0.06);
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Sarabun', 'Angsana New', sans-serif;
+    background: var(--bg); margin: 0; padding: 0; color: var(--ink-900);
+  }
+  .topbar {
+    background: linear-gradient(135deg, var(--ku-green-800), var(--ku-green-600));
+    color: #fff; padding: 20px 16px; margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(18,51,25,0.18);
+  }
+  .topbar-inner { max-width: 720px; margin: 0 auto; display: flex; align-items: center; gap: 12px; }
+  .topbar-icon {
+    font-size: 24px; line-height: 1; flex-shrink: 0; background: rgba(255,255,255,0.15);
+    border-radius: 50%; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center;
+  }
+  .topbar-title { font-size: 16.5px; font-weight: 700; }
+  .topbar-sub { font-size: 12px; opacity: 0.9; margin-top: 2px; }
+
+  .page { max-width: 720px; margin: 0 auto; padding: 0 16px 40px; }
+  .nav-bar { max-width: 480px; margin: 0 auto 16px; display: flex; gap: 8px; }
+  .nav-link {
+    flex: 1; text-align: center; padding: 10px; border-radius: var(--radius-sm);
+    font-weight: 700; font-size: 13.5px; text-decoration: none;
+    border: 1.5px solid var(--ku-green-100); color: var(--ku-green-800); background: #fff;
+  }
+  .nav-link.active {
+    background: linear-gradient(135deg, var(--ku-green-700), var(--ku-green-600));
+    color: #fff; border-color: transparent;
+  }
+
+  .state-msg {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-md);
+    padding: 24px; text-align: center; color: var(--ink-600); font-size: 14px;
+  }
+  .state-msg.err { color: var(--danger); background: var(--danger-bg); border-color: #f3c8c2; }
+  .gate-title { font-size: 15px; font-weight: 700; color: var(--ink-900); margin-bottom: 6px; }
+  .gate-sub { font-size: 13px; color: var(--ink-400); margin-bottom: 16px; }
+  .gsi-btn-wrap { display: flex; justify-content: center; }
+
+  .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+  .updated-label { font-size: 12px; color: var(--ink-400); }
+  .refresh-btn {
+    background: var(--card); border: 1.5px solid var(--ku-green-500); color: var(--ku-green-700);
+    font-weight: 700; font-size: 13px; padding: 7px 14px; border-radius: 20px; cursor: pointer;
+  }
+  .refresh-btn:active { transform: scale(0.97); }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 18px; }
+  .stat-tile {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-md);
+    padding: 14px 16px; box-shadow: var(--shadow-card);
+  }
+  .stat-tile .label { font-size: 12.5px; color: var(--ink-400); font-weight: 600; }
+  .stat-tile .value { font-size: 26px; font-weight: 700; color: var(--ink-900); margin-top: 2px; }
+  .stat-tile.full .value { color: var(--ku-green-700); }
+  .stat-tile.partial .value { color: var(--ku-gold-600); }
+  .stat-tile.avg .value { color: var(--ku-green-800); }
+
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg);
+    padding: 18px; margin-bottom: 16px; box-shadow: var(--shadow-card);
+  }
+  .card h2 { font-size: 15px; margin: 0 0 14px; color: var(--ku-green-800); font-weight: 700; }
+
+  .bar-row { margin-bottom: 14px; }
+  .bar-row:last-child { margin-bottom: 0; }
+  .bar-row-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; margin-bottom: 5px; gap: 8px; }
+  .bar-row-head .label { font-weight: 600; color: var(--ink-900); }
+  .bar-row-head .count { font-size: 11.5px; color: var(--ink-400); font-weight: 500; }
+  .bar-row-head .value { font-weight: 700; color: var(--ku-green-800); flex-shrink: 0; }
+  .bar-track { height: 11px; background: var(--ku-green-100); border-radius: 20px; overflow: hidden; }
+  .bar-fill { height: 100%; background: linear-gradient(90deg, var(--ku-green-500), var(--ku-green-700)); border-radius: 20px; transition: width .3s ease; }
+
+  .search-input {
+    width: 100%; padding: 11px 14px; font-size: 15px; border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border); font-family: inherit; margin-bottom: 14px;
+  }
+  .search-input:focus { outline: none; border-color: var(--ku-green-500); box-shadow: 0 0 0 3px var(--ku-green-100); }
+
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+  th:nth-child(1), td:nth-child(1) { width: 46%; }
+  th:nth-child(2), td:nth-child(2) { width: 22%; }
+  th:nth-child(3), td:nth-child(3) { width: 17%; }
+  th:nth-child(4), td:nth-child(4) { width: 15%; }
+  th { text-align: left; font-size: 11.5px; color: var(--ink-400); font-weight: 700; padding: 0 8px 8px; border-bottom: 1.5px solid var(--border); white-space: nowrap; }
+  td { padding: 10px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  .stu-name { font-weight: 700; color: var(--ink-900); }
+  .stu-topic { font-size: 11.5px; color: var(--ink-400); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .stu-room { font-weight: 600; }
+  .stu-term { font-size: 11.5px; color: var(--ink-400); }
+  .badge { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+  .badge-full { background: var(--ku-green-100); color: var(--ku-green-800); }
+  .badge-partial { background: var(--ku-gold-100); color: #6b5310; }
+  .badge-none { background: #eef1ee; color: #5c6b62; }
+  .avg-cell { font-weight: 700; color: var(--ku-green-800); }
+  .avg-cell.empty { color: var(--ink-400); font-weight: 500; }
+  .no-results { text-align: center; color: var(--ink-400); padding: 20px; font-size: 13px; }
+</style>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="topbar-inner">
+      <span class="topbar-icon">📊</span>
+      <div>
+        <div class="topbar-title">แดชบอร์ดสรุปผลการประเมิน</div>
+        <div class="topbar-sub">ข้อเสนอหัวข้อปัญหาพิเศษ · ปีการศึกษา 2569</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <nav class="nav-bar">
+      <a class="nav-link" href="index.html">📝 ให้คะแนน</a>
+      <a class="nav-link active" href="dashboard.html">📊 แดชบอร์ด</a>
+    </nav>
+
+    <div class="state-msg" id="loginGate">
+      <div class="gate-title">🔒 หน้านี้จำกัดสิทธิ์เฉพาะผู้ดูแลระบบ</div>
+      <div class="gate-sub">กรุณาเข้าสู่ระบบด้วยบัญชี Google ที่ได้รับอนุญาต</div>
+      <div id="gsiButton" class="gsi-btn-wrap"></div>
+    </div>
+    <div class="state-msg err" id="authErrMsg" style="display:none;"></div>
+
+    <div class="state-msg" id="loadingMsg" style="display:none;">กำลังโหลดข้อมูล...</div>
+    <div class="state-msg err" id="errMsg" style="display:none;"></div>
+
+    <div id="dashboardContent" style="display:none;">
+      <div class="toolbar">
+        <span class="updated-label" id="updatedLabel"></span>
+        <button class="refresh-btn" id="refreshBtn">↻ รีเฟรช</button>
+      </div>
+
+      <div class="stat-grid" id="statGrid"></div>
+
+      <div class="card">
+        <h2>คะแนนเฉลี่ยแยกตามห้องสอบ/แผนการเรียน</h2>
+        <div id="roomChart"></div>
+      </div>
+
+      <div class="card">
+        <h2>รายชื่อนิสิตทั้งหมด</h2>
+        <input type="text" id="searchInput" class="search-input" placeholder="ค้นหารหัสนิสิต / ชื่อ / หัวข้อ">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>นิสิต</th>
+                <th>ห้อง/แผน</th>
+                <th>กรรมการ</th>
+                <th>เฉลี่ย</th>
+              </tr>
+            </thead>
+            <tbody id="studentTbody"></tbody>
+          </table>
+          <div class="no-results" id="noResults" style="display:none;">ไม่พบรายชื่อที่ค้นหา</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+<script>
+  // ต้องตรงกับ GAS_URL ใน index.html
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbzYTvGLDpeLlW6FqIl1KX1tpOcatmjrnkKiUYL1jfx7tCHs8jPmX8Zm2wqMJsfR11Vm/exec';
+
+  // Client ID จาก Google Cloud Console (OAuth 2.0 Client ID ประเภท Web application)
+  // ต้องตั้ง Authorized JavaScript origins ให้ตรงกับโดเมนที่โฮสต์ไฟล์นี้ (เช่น https://suriyapi.github.io)
+  const GOOGLE_CLIENT_ID = '992775338655-41i4ftusliminfbr35i31cj20n7lpd12.apps.googleusercontent.com';
+
+  const TERM_LABEL = { 'ปกติ': 'ภาคปกติ', 'พิเศษ': 'ภาคพิเศษ' };
+  let allStudents = [];
+  let currentIdToken = null;
+
+  function fmtTerm(term) { return TERM_LABEL[term] || term; }
+
+  // ---------- Google Sign-In ----------
+  // การตรวจสอบสิทธิ์ "จริง" เกิดที่ฝั่ง Code.gs (ตรวจลายเซ็น token กับ Google โดยตรง)
+  // ส่วนนี้แค่แสดงปุ่ม/สถานะ — ห้ามใช้แทนการตรวจสอบฝั่ง server
+  window.addEventListener('load', function () {
+    if (GOOGLE_CLIENT_ID.indexOf('YOUR_GOOGLE_CLIENT_ID') !== -1) {
+      showAuthError('ยังไม่ได้ตั้งค่า GOOGLE_CLIENT_ID ในไฟล์ dashboard.html — ดูขั้นตอนใน HANDOFF.md');
+      return;
+    }
+    if (!window.google || !google.accounts || !google.accounts.id) {
+      showAuthError('โหลด Google Sign-In ไม่สำเร็จ (เช็คการเชื่อมต่ออินเทอร์เน็ต)');
+      return;
+    }
+    google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: handleCredentialResponse
+    });
+    google.accounts.id.renderButton(document.getElementById('gsiButton'), {
+      theme: 'outline', size: 'large', text: 'signin_with', locale: 'th'
+    });
+  });
+
+  function handleCredentialResponse(response) {
+    currentIdToken = response.credential;
+    document.getElementById('authErrMsg').style.display = 'none';
+    loadDashboard();
+  }
+
+  function showAuthError(text) {
+    const el = document.getElementById('authErrMsg');
+    el.textContent = text;
+    el.style.display = 'block';
+  }
+
+  function loadDashboard() {
+    if (!currentIdToken) return;
+    document.getElementById('loadingMsg').style.display = 'block';
+    document.getElementById('errMsg').style.display = 'none';
+    document.getElementById('dashboardContent').style.display = 'none';
+
+    fetch(GAS_URL + '?action=getDashboard&idToken=' + encodeURIComponent(currentIdToken))
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        document.getElementById('loadingMsg').style.display = 'none';
+
+        if (data && data.status === 'unauthorized') {
+          currentIdToken = null;
+          document.getElementById('loginGate').style.display = 'block';
+          showAuthError('บัญชีนี้ไม่มีสิทธิ์เข้าถึงหน้านี้' + (data.email ? ' (' + data.email + ')' : ''));
+          return;
+        }
+
+        document.getElementById('loginGate').style.display = 'none';
+        document.getElementById('dashboardContent').style.display = 'block';
+        document.getElementById('updatedLabel').textContent = 'อัปเดตล่าสุด ' + new Date().toLocaleTimeString('th-TH');
+        renderStats(data.stats);
+        renderRoomChart(data.byRoom);
+        allStudents = data.students || [];
+        renderTable(allStudents);
+      })
+      .catch(function (err) {
+        document.getElementById('loadingMsg').style.display = 'none';
+        const errEl = document.getElementById('errMsg');
+        errEl.textContent = 'โหลดข้อมูลไม่สำเร็จ: ' + err.message + ' (ตรวจสอบว่า Code.gs มีฟังก์ชัน getDashboard และ deploy เวอร์ชันล่าสุดแล้ว)';
+        errEl.style.display = 'block';
+      });
+  }
+
+  function renderStats(stats) {
+    const tiles = [
+      { label: 'นิสิตทั้งหมด', value: stats.totalStudents, cls: '' },
+      { label: 'คะแนนเฉลี่ยรวม', value: stats.overallAverage !== null ? stats.overallAverage + '/10' : '-', cls: 'avg' },
+      { label: 'ประเมินครบแล้ว', value: stats.evaluatedFull, cls: 'full' },
+      { label: 'ประเมินบางส่วน', value: stats.evaluatedPartial, cls: 'partial' }
+    ];
+    const grid = document.getElementById('statGrid');
+    grid.innerHTML = '';
+    tiles.forEach(function (t) {
+      const div = document.createElement('div');
+      div.className = 'stat-tile' + (t.cls ? ' ' + t.cls : '');
+      div.innerHTML = '<div class="label">' + t.label + '</div><div class="value">' + t.value + '</div>';
+      grid.appendChild(div);
+    });
+  }
+
+  function renderRoomChart(byRoom) {
+    const wrap = document.getElementById('roomChart');
+    wrap.innerHTML = '';
+    if (!byRoom || byRoom.length === 0) {
+      wrap.innerHTML = '<div class="no-results">ยังไม่มีข้อมูลคะแนน</div>';
+      return;
+    }
+    byRoom.forEach(function (g) {
+      const pct = g.avg !== null ? Math.max(0, Math.min(100, g.avg / 10 * 100)) : 0;
+      const row = document.createElement('div');
+      row.className = 'bar-row';
+      row.innerHTML =
+        '<div class="bar-row-head">' +
+          '<span class="label">' + g.room + ' · ' + fmtTerm(g.term) +
+            ' <span class="count">(ครบแล้ว ' + g.fullyEvaluated + '/' + g.studentCount + ' คน)</span></span>' +
+          '<span class="value">' + (g.avg !== null ? g.avg + '/10' : '-') + '</span>' +
+        '</div>' +
+        '<div class="bar-track"><div class="bar-fill" style="width:' + pct + '%"></div></div>';
+      wrap.appendChild(row);
+    });
+  }
+
+  function renderTable(students) {
+    const tbody = document.getElementById('studentTbody');
+    tbody.innerHTML = '';
+    document.getElementById('noResults').style.display = students.length === 0 ? 'block' : 'none';
+    students.forEach(function (s) {
+      const tr = document.createElement('tr');
+
+      const tdName = document.createElement('td');
+      tdName.innerHTML = '<div class="stu-name"></div><div class="stu-topic"></div>';
+      tdName.querySelector('.stu-name').textContent = s.name + ' (' + s.id + ')';
+      tdName.querySelector('.stu-topic').textContent = s.topic || '';
+      tdName.querySelector('.stu-topic').title = s.topic || '';
+
+      const tdRoom = document.createElement('td');
+      tdRoom.innerHTML = '<div class="stu-room"></div><div class="stu-term"></div>';
+      tdRoom.querySelector('.stu-room').textContent = s.room;
+      tdRoom.querySelector('.stu-term').textContent = fmtTerm(s.term);
+
+      const tdCount = document.createElement('td');
+      const badge = document.createElement('span');
+      badge.className = 'badge ' + (s.count === 0 ? 'badge-none' : (s.expected > 0 && s.count >= s.expected ? 'badge-full' : 'badge-partial'));
+      badge.textContent = s.count + '/' + (s.expected || '?');
+      tdCount.appendChild(badge);
+
+      const tdAvg = document.createElement('td');
+      tdAvg.className = 'avg-cell' + (s.avg === null ? ' empty' : '');
+      tdAvg.textContent = s.avg !== null ? s.avg : '-';
+
+      tr.appendChild(tdName);
+      tr.appendChild(tdRoom);
+      tr.appendChild(tdCount);
+      tr.appendChild(tdAvg);
+      tbody.appendChild(tr);
+    });
+  }
+
+  document.getElementById('searchInput').addEventListener('input', function () {
+    const q = this.value.trim().toLowerCase();
+    if (!q) { renderTable(allStudents); return; }
+    const filtered = allStudents.filter(function (s) {
+      return (s.id + s.name + (s.topic || '')).toLowerCase().indexOf(q) !== -1;
+    });
+    renderTable(filtered);
+  });
+
+  document.getElementById('refreshBtn').addEventListener('click', loadDashboard);
+</script>
+</body>
+</html>

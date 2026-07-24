@@ -1,0 +1,19 @@
+# Google Apps Script (clasp) — .clasprc.json มี OAuth token, ห้ามอัพเด็ดขาด
+.clasp.json
+.clasprc.json
+
+# Credentials / secrets
+*.env
+.env.*
+credentials.json
+service-account*.json
+*service-account*.json
+*.pem
+*.key
+
+# macOS
+.DS_Store
+
+# Editor / tooling
+.vscode/
+node_modules/

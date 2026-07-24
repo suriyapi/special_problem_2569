@@ -3,93 +3,228 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ให้คะแนนข้อเสนอหัวข้อ - ปัญหาพิเศษ</title>
+<meta name="theme-color" content="#2f7d32">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8C%BF%3C/text%3E%3C/svg%3E">
+<title>ระบบประเมินข้อเสนอหัวข้อปัญหาพิเศษ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
+  :root {
+    --ku-green-900: #123319;
+    --ku-green-800: #1c4d24;
+    --ku-green-700: #2f7d32;
+    --ku-green-600: #3f9142;
+    --ku-green-500: #4c9a2a;
+    --ku-green-400: #6fb84f;
+    --ku-green-100: #e6f4e1;
+    --ku-green-50: #f3f9f0;
+    --ku-gold-600: #b8860b;
+    --ku-gold-100: #faf3d9;
+    --ink-900: #16231a;
+    --ink-600: #4c5c50;
+    --ink-400: #7c8c80;
+    --border: #dbe6d8;
+    --bg: #f2f6f1;
+    --card: #ffffff;
+    --danger: #c0392b;
+    --danger-bg: #fdecea;
+    --danger-border: #f3c8c2;
+    --warn: #8a6d1a;
+    --warn-bg: #fff3cd;
+    --warn-border: #f0dfa0;
+    --radius-lg: 18px;
+    --radius-md: 12px;
+    --radius-sm: 9px;
+    --shadow-card: 0 2px 10px rgba(18,51,25,0.08), 0 1px 3px rgba(18,51,25,0.06);
+  }
   * { box-sizing: border-box; }
   body {
     font-family: 'Sarabun', 'Angsana New', sans-serif;
-    background: #f4f6f8;
+    background: var(--bg);
     margin: 0;
-    padding: 16px;
-    color: #222;
+    padding: 0;
+    color: var(--ink-900);
   }
+  .page {
+    padding: 0 16px 32px;
+  }
+  .nav-bar {
+    max-width: 480px; margin: 0 auto 16px; display: flex; gap: 8px;
+  }
+  .nav-link {
+    flex: 1; text-align: center; padding: 10px; border-radius: var(--radius-sm);
+    font-weight: 700; font-size: 13.5px; text-decoration: none;
+    border: 1.5px solid var(--ku-green-100); color: var(--ku-green-800); background: #fff;
+  }
+  .nav-link.active {
+    background: linear-gradient(135deg, var(--ku-green-700), var(--ku-green-600));
+    color: #fff; border-color: transparent;
+  }
+
+  .topbar {
+    background: linear-gradient(135deg, var(--ku-green-800), var(--ku-green-600));
+    color: #fff;
+    padding: 20px 16px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(18,51,25,0.18);
+  }
+  .topbar-inner {
+    max-width: 480px; margin: 0 auto; display: flex; align-items: center; gap: 12px;
+  }
+  .topbar-icon {
+    font-size: 26px; line-height: 1; flex-shrink: 0;
+    background: rgba(255,255,255,0.15); border-radius: 50%; width: 44px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .topbar-title { font-size: 17px; font-weight: 700; }
+  .topbar-sub { font-size: 12.5px; opacity: 0.92; margin-top: 2px; }
+  .topbar-sub2 { font-size: 11px; opacity: 0.75; margin-top: 1px; }
+
   .card {
-    background: #fff;
-    border-radius: 12px;
-    padding: 20px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 22px;
     max-width: 480px;
     margin: 0 auto 16px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    box-shadow: var(--shadow-card);
   }
-  h1 { font-size: 20px; margin: 0 0 4px; color: #1a3c6e; }
-  p.sub { color: #666; font-size: 14px; margin-top: 0; }
-  label { display: block; font-weight: bold; margin: 14px 0 6px; font-size: 15px; }
+  h1 { font-size: 18px; margin: 0 0 4px; color: var(--ku-green-800); font-weight: 700; }
+  p.sub { color: var(--ink-400); font-size: 13.5px; margin-top: 0; }
+  label { display: block; font-weight: 600; margin: 14px 0 6px; font-size: 14.5px; color: var(--ink-900); }
   select, input[type=text], input[type=tel] {
-    width: 100%; padding: 12px; font-size: 16px; border-radius: 8px; border: 1px solid #ccc;
+    width: 100%; padding: 12px 14px; font-size: 16px; border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border); font-family: inherit; color: var(--ink-900);
+    background: #fff; transition: border-color .15s, box-shadow .15s;
+  }
+  select:focus, input[type=text]:focus, input[type=tel]:focus {
+    outline: none; border-color: var(--ku-green-500);
+    box-shadow: 0 0 0 3px var(--ku-green-100);
   }
   .evaluator-badge {
-    display: inline-block; margin-top: 8px; padding: 6px 12px; background: #e8f0fe;
-    color: #1a3c6e; border-radius: 20px; font-size: 13px; font-weight: bold;
+    display: inline-block; margin-top: 8px; padding: 6px 14px; background: var(--ku-green-100);
+    color: var(--ku-green-800); border-radius: 20px; font-size: 13px; font-weight: 700;
   }
   .change-link {
-    font-size: 13px; color: #1a73e8; text-decoration: underline; cursor: pointer; margin-left: 8px;
+    font-size: 13px; color: var(--ku-green-700); text-decoration: underline; cursor: pointer; margin-left: 8px;
+    font-weight: 600;
   }
+  #evaluatorAssignment {
+    margin-top: 12px; font-size: 12.5px; color: var(--ku-green-800);
+    background: var(--ku-green-50); border: 1px solid var(--ku-green-100); border-radius: var(--radius-sm);
+    padding: 10px 12px; display: none;
+  }
+  #evaluatorAssignment:not(:empty) { display: block; }
+  #evaluatorAssignment .assign-title { font-weight: 700; margin-bottom: 4px; }
+  #evaluatorAssignment .assign-row { padding: 2px 0; font-weight: 500; }
   .student-info {
-    background: #f8f9fb; border: 1px solid #e0e4e9; border-radius: 8px; padding: 12px 14px;
-    margin-top: 10px; font-size: 14px; display: none;
+    background: var(--ku-green-50); border: 1px solid var(--ku-green-100); border-radius: var(--radius-md);
+    padding: 14px 16px; margin-top: 10px; font-size: 14px; display: none;
   }
   .student-info.show { display: block; }
   .student-info .row { margin-bottom: 4px; }
-  .student-info .label { color: #888; display: inline-block; min-width: 90px; }
-  .student-info .topic { font-weight: bold; color: #1a3c6e; margin-top: 6px; }
+  .student-info .label { color: var(--ink-400); display: inline-block; min-width: 90px; }
+  .student-info .topic { font-weight: 700; color: var(--ku-green-800); margin-top: 6px; }
   .warning-box {
-    background: #fdecea; color: #c0392b; border-radius: 8px; padding: 10px 14px;
-    margin-top: 10px; font-size: 13px; display: none;
+    background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger-border);
+    border-radius: var(--radius-md); padding: 10px 14px; margin-top: 10px; font-size: 13px; display: none;
   }
   .warning-box.show { display: block; }
-  .criterion { border-top: 1px solid #eee; padding-top: 12px; margin-top: 12px; }
-  .crit-title { font-weight: bold; font-size: 15px; }
-  .crit-weight { font-weight: normal; color: #888; font-size: 13px; }
-  .scale-row { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .progress-wrap {
+    height: 7px; background: var(--ku-green-100); border-radius: 20px; overflow: hidden; margin-top: 4px;
+  }
+  .progress-bar {
+    height: 100%; width: 0%; background: linear-gradient(90deg, var(--ku-green-500), var(--ku-green-700));
+    border-radius: 20px; transition: width .25s ease;
+  }
+  .progress-label { font-size: 12px; color: var(--ink-400); margin-top: 5px; font-weight: 600; }
+
+  .criterion {
+    background: #fbfdfa; border: 1px solid var(--border); border-radius: var(--radius-md);
+    padding: 14px 14px 15px; margin-top: 12px;
+  }
+  .crit-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .crit-title { font-weight: 700; font-size: 14.5px; line-height: 1.4; }
+  .crit-weight {
+    flex-shrink: 0; background: var(--ku-green-100); color: var(--ku-green-800); font-weight: 700;
+    font-size: 11.5px; padding: 3px 10px; border-radius: 20px; white-space: nowrap; margin-top: 1px;
+  }
+  .scale-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 12px; }
   .scale-opt {
-    flex: 1; min-width: 55px; text-align: center; border: 2px solid #ddd; border-radius: 8px;
-    padding: 8px 2px; font-size: 12px; cursor: pointer; user-select: none;
+    min-width: 0; text-align: center; border: 1.5px solid var(--border); border-radius: 12px;
+    padding: 10px 3px; font-size: 11px; cursor: pointer; user-select: none;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease;
+    color: var(--ink-600); background: #fff; overflow-wrap: break-word;
   }
+  .scale-opt:hover { border-color: var(--ku-green-400); transform: translateY(-1px); }
+  .scale-opt:active { transform: scale(0.96); }
   .scale-opt input { display: none; }
-  .scale-opt.selected {
-    border-color: #1a73e8; background: #e8f0fe; color: #1a3c6e; font-weight: bold;
-  }
+  .scale-opt strong { font-size: 17px; line-height: 1; }
+  .scale-opt span { font-size: 10.5px; line-height: 1.2; }
+  .scale-opt.selected { color: #fff; font-weight: 700; border-color: transparent; transform: translateY(-1px); }
+  .scale-opt[data-val="0"].selected { background: linear-gradient(135deg, #e0584a, #c0392b); box-shadow: 0 3px 10px rgba(192,57,43,.35); }
+  .scale-opt[data-val="1"].selected { background: linear-gradient(135deg, #f0a339, #d97706); box-shadow: 0 3px 10px rgba(217,119,6,.32); }
+  .scale-opt[data-val="2"].selected { background: linear-gradient(135deg, #d4af37, #b8860b); box-shadow: 0 3px 10px rgba(184,134,11,.32); }
+  .scale-opt[data-val="3"].selected { background: linear-gradient(135deg, #7cb342, #4c9a2a); box-shadow: 0 3px 10px rgba(76,154,42,.32); }
+  .scale-opt[data-val="4"].selected { background: linear-gradient(135deg, #3f9142, #1c4d24); box-shadow: 0 3px 10px rgba(28,77,36,.35); }
   button {
-    width: 100%; background: #1a73e8; color: #fff; border: none; padding: 14px;
-    font-size: 16px; border-radius: 8px; margin-top: 20px; cursor: pointer;
+    width: 100%; background: linear-gradient(135deg, var(--ku-green-700), var(--ku-green-600));
+    color: #fff; border: none; padding: 15px; font-weight: 700;
+    font-size: 16px; border-radius: var(--radius-sm); margin-top: 22px; cursor: pointer;
+    box-shadow: 0 2px 6px rgba(47,125,50,0.3); transition: opacity .15s, transform .08s;
   }
-  button:disabled { background: #999; }
+  button:active { transform: scale(0.99); }
+  button:disabled { background: var(--ink-400); box-shadow: none; cursor: default; }
   #scoreSection { display: none; }
   #scoreSection.show { display: block; }
   #msg {
-    max-width: 480px; margin: 0 auto; padding: 12px 16px; border-radius: 8px;
-    display: none; font-size: 14px;
+    max-width: 480px; margin: 0 auto; padding: 13px 16px; border-radius: var(--radius-md);
+    display: none; font-size: 14px; font-weight: 600; border: 1px solid transparent;
   }
-  #msg.ok { background: #e6f4ea; color: #1e7e34; display: block; }
-  #msg.err { background: #fdecea; color: #c0392b; display: block; }
-  .total-preview { text-align: right; font-size: 14px; color: #444; margin-top: 10px; }
-  .total-preview b { color: #1a3c6e; font-size: 17px; }
+  #msg.ok { background: var(--ku-green-50); color: var(--ku-green-800); border-color: var(--ku-green-100); display: block; }
+  #msg.err { background: var(--danger-bg); color: var(--danger); border-color: var(--danger-border); display: block; }
+  .total-preview {
+    text-align: right; font-size: 14px; color: var(--ink-600); margin-top: 14px;
+    padding-top: 12px; border-top: 1px dashed var(--border);
+  }
+  .total-preview b { color: var(--ku-green-800); font-size: 19px; }
   .config-warning {
-    max-width: 480px; margin: 0 auto 16px; background: #fff3cd; color: #856404;
-    padding: 12px 16px; border-radius: 8px; font-size: 13px; display: none;
+    max-width: 480px; margin: 0 auto 16px; background: var(--warn-bg); color: var(--warn);
+    border: 1px solid var(--warn-border);
+    padding: 12px 16px; border-radius: var(--radius-md); font-size: 13px; display: none;
   }
   .config-warning.show { display: block; }
 </style>
 </head>
 <body>
 
+  <header class="topbar">
+    <div class="topbar-inner">
+      <span class="topbar-icon">🌿</span>
+      <div>
+        <div class="topbar-title">ระบบประเมินข้อเสนอหัวข้อปัญหาพิเศษ</div>
+        <div class="topbar-sub">สาขาวิชาเทคโนโลยีสารสนเทศและการสื่อสาร · ปีการศึกษา 2569</div>
+        <div class="topbar-sub2">ภาควิชาวิทยาการคำนวณฯ · คณะศิลปศาสตร์และวิทยาศาสตร์ · ม.เกษตรศาสตร์ กำแพงแสน</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+
+  <nav class="nav-bar">
+    <a class="nav-link active" href="index.html">📝 ให้คะแนน</a>
+    <a class="nav-link" href="dashboard.html">📊 แดชบอร์ด</a>
+  </nav>
+
   <div class="config-warning" id="configWarning">
     ⚠️ ยังไม่ได้ตั้งค่า URL ของ Apps Script — แก้ค่า <code>GAS_URL</code> ในไฟล์นี้ก่อนใช้งานจริง
   </div>
 
   <div class="card" id="evaluatorCard">
-    <h1>ให้คะแนนข้อเสนอหัวข้อ (Proposal)</h1>
-    <p class="sub">รายวิชาปัญหาพิเศษ — เต็ม 10 คะแนน</p>
+    <h1>เลือกชื่อกรรมการ</h1>
+    <p class="sub">ระบบให้คะแนนหมวดข้อเสนอหัวข้อ — เต็ม 10 คะแนน</p>
 
     <label>คุณคือกรรมการท่านใด</label>
     <select id="evaluatorSelect">
@@ -121,6 +256,8 @@
     </div>
 
     <div id="scoreSection">
+      <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
+      <div class="progress-label" id="progressLabel">ให้คะแนนแล้ว 0/5 ข้อ</div>
       <div id="criteriaArea"></div>
       <div class="total-preview">คะแนนรวมโดยประมาณ: <b id="totalPreview">0</b> / 10</div>
       <button id="submitBtn">บันทึกคะแนน</button>
@@ -128,6 +265,8 @@
   </div>
 
   <div id="msg"></div>
+
+  </main>
 
 <script>
   // ==========================================================================
@@ -168,11 +307,11 @@
       for (let v = 0; v <= 4; v++) {
         scaleHtml += '<label class="scale-opt" data-key="' + c.key + '" data-val="' + v + '">' +
           '<input type="radio" name="' + c.key + '" value="' + v + '">' +
-          v + '<br>' + SCALE_LABELS[v] + '</label>';
+          '<strong>' + v + '</strong><span>' + SCALE_LABELS[v] + '</span></label>';
       }
       scaleHtml += '</div>';
-      div.innerHTML = '<div class="crit-title">' + c.label +
-        ' <span class="crit-weight">(น้ำหนัก ' + c.weight + ' คะแนน)</span></div>' + scaleHtml;
+      div.innerHTML = '<div class="crit-head"><div class="crit-title">' + c.label + '</div>' +
+        '<span class="crit-weight">น้ำหนัก ' + c.weight + '</span></div>' + scaleHtml;
       area.appendChild(div);
     });
 
@@ -192,11 +331,15 @@
 
   function updateTotalPreview() {
     let total = 0;
+    let answered = 0;
     CRITERIA.forEach(function (c) {
-      const raw = currentScores[c.key] || 0;
-      total += (raw / 4) * c.weight;
+      const raw = currentScores[c.key];
+      if (raw !== undefined) answered++;
+      total += ((raw || 0) / 4) * c.weight;
     });
     document.getElementById('totalPreview').textContent = Math.round(total * 100) / 100;
+    document.getElementById('progressBar').style.width = (answered / CRITERIA.length * 100) + '%';
+    document.getElementById('progressLabel').textContent = 'ให้คะแนนแล้ว ' + answered + '/' + CRITERIA.length + ' ข้อ';
   }
 
   renderCriteria();
@@ -262,11 +405,28 @@
 
     document.getElementById('currentEvaluatorBadge').textContent = name;
     const assignEl = document.getElementById('evaluatorAssignment');
+    assignEl.innerHTML = '';
     if (assignments.length > 0) {
-      const rooms = Array.from(new Set(assignments.map(function (a) { return a.term + ' ' + a.room; })));
-      assignEl.textContent = 'ประจำ: ' + rooms.join(', ');
-    } else {
-      assignEl.textContent = '';
+      const TERM_INFO = {
+        'ปกติ': { label: 'แผนการเรียนภาคปกติ', date: '25 กรกฎาคม 2569' },
+        'พิเศษ': { label: 'แผนการเรียนภาคพิเศษ', date: '26 กรกฎาคม 2569' }
+      };
+      const title = document.createElement('div');
+      title.className = 'assign-title';
+      title.textContent = 'กรรมการสอบ';
+      assignEl.appendChild(title);
+
+      const seen = new Set();
+      assignments.forEach(function (a) {
+        const key = a.term + '|' + a.room;
+        if (seen.has(key)) return;
+        seen.add(key);
+        const info = TERM_INFO[a.term] || { label: 'แผนการเรียน' + a.term, date: '' };
+        const row = document.createElement('div');
+        row.className = 'assign-row';
+        row.textContent = '📅 ' + info.label + (info.date ? ' วันที่ ' + info.date : '') + ' · ห้อง ' + a.room;
+        assignEl.appendChild(row);
+      });
     }
 
     document.getElementById('evaluatorCard').style.display = 'none';

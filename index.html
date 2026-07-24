@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ให้คะแนนข้อเสนอหัวข้อ - ปัญหาพิเศษ</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Sarabun', 'Angsana New', sans-serif;
+    background: #f4f6f8;
+    margin: 0;
+    padding: 16px;
+    color: #222;
+  }
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    max-width: 480px;
+    margin: 0 auto 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  }
+  h1 { font-size: 20px; margin: 0 0 4px; color: #1a3c6e; }
+  p.sub { color: #666; font-size: 14px; margin-top: 0; }
+  label { display: block; font-weight: bold; margin: 14px 0 6px; font-size: 15px; }
+  select, input[type=text], input[type=tel] {
+    width: 100%; padding: 12px; font-size: 16px; border-radius: 8px; border: 1px solid #ccc;
+  }
+  .evaluator-badge {
+    display: inline-block; margin-top: 8px; padding: 6px 12px; background: #e8f0fe;
+    color: #1a3c6e; border-radius: 20px; font-size: 13px; font-weight: bold;
+  }
+  .change-link {
+    font-size: 13px; color: #1a73e8; text-decoration: underline; cursor: pointer; margin-left: 8px;
+  }
+  .student-info {
+    background: #f8f9fb; border: 1px solid #e0e4e9; border-radius: 8px; padding: 12px 14px;
+    margin-top: 10px; font-size: 14px; display: none;
+  }
+  .student-info.show { display: block; }
+  .student-info .row { margin-bottom: 4px; }
+  .student-info .label { color: #888; display: inline-block; min-width: 90px; }
+  .student-info .topic { font-weight: bold; color: #1a3c6e; margin-top: 6px; }
+  .warning-box {
+    background: #fdecea; color: #c0392b; border-radius: 8px; padding: 10px 14px;
+    margin-top: 10px; font-size: 13px; display: none;
+  }
+  .warning-box.show { display: block; }
+  .criterion { border-top: 1px solid #eee; padding-top: 12px; margin-top: 12px; }
+  .crit-title { font-weight: bold; font-size: 15px; }
+  .crit-weight { font-weight: normal; color: #888; font-size: 13px; }
+  .scale-row { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .scale-opt {
+    flex: 1; min-width: 55px; text-align: center; border: 2px solid #ddd; border-radius: 8px;
+    padding: 8px 2px; font-size: 12px; cursor: pointer; user-select: none;
+  }
+  .scale-opt input { display: none; }
+  .scale-opt.selected {
+    border-color: #1a73e8; background: #e8f0fe; color: #1a3c6e; font-weight: bold;
+  }
+  button {
+    width: 100%; background: #1a73e8; color: #fff; border: none; padding: 14px;
+    font-size: 16px; border-radius: 8px; margin-top: 20px; cursor: pointer;
+  }
+  button:disabled { background: #999; }
+  #scoreSection { display: none; }
+  #scoreSection.show { display: block; }
+  #msg {
+    max-width: 480px; margin: 0 auto; padding: 12px 16px; border-radius: 8px;
+    display: none; font-size: 14px;
+  }
+  #msg.ok { background: #e6f4ea; color: #1e7e34; display: block; }
+  #msg.err { background: #fdecea; color: #c0392b; display: block; }
+  .total-preview { text-align: right; font-size: 14px; color: #444; margin-top: 10px; }
+  .total-preview b { color: #1a3c6e; font-size: 17px; }
+  .config-warning {
+    max-width: 480px; margin: 0 auto 16px; background: #fff3cd; color: #856404;
+    padding: 12px 16px; border-radius: 8px; font-size: 13px; display: none;
+  }
+  .config-warning.show { display: block; }
+</style>
+</head>
+<body>
+
+  <div class="config-warning" id="configWarning">
+    ⚠️ ยังไม่ได้ตั้งค่า URL ของ Apps Script — แก้ค่า <code>GAS_URL</code> ในไฟล์นี้ก่อนใช้งานจริง
+  </div>
+
+  <div class="card" id="evaluatorCard">
+    <h1>ให้คะแนนข้อเสนอหัวข้อ (Proposal)</h1>
+    <p class="sub">รายวิชาปัญหาพิเศษ — เต็ม 10 คะแนน</p>
+
+    <label>คุณคือกรรมการท่านใด</label>
+    <select id="evaluatorSelect">
+      <option value="">-- กำลังโหลดรายชื่อ... --</option>
+    </select>
+    <input type="text" id="evaluatorOther" placeholder="พิมพ์ชื่อ-สกุล" style="display:none; margin-top:8px;">
+    <div id="evaluatorAssignment"></div>
+  </div>
+
+  <div class="card" id="mainCard" style="display:none;">
+    <div>
+      <span class="evaluator-badge" id="currentEvaluatorBadge"></span>
+      <span class="change-link" id="changeEvaluatorLink">เปลี่ยนกรรมการ</span>
+    </div>
+
+    <label>รหัสนิสิต</label>
+    <input type="tel" id="studentIdInput" inputmode="numeric" placeholder="พิมพ์รหัสนิสิต 10 หลัก" maxlength="10" autofocus>
+
+    <div class="student-info" id="studentInfo">
+      <div class="row"><span class="label">ชื่อ-สกุล:</span> <span id="infoName"></span></div>
+      <div class="row"><span class="label">ห้องสอบ:</span> <span id="infoRoom"></span></div>
+      <div class="row"><span class="label">แผนการเรียน:</span> <span id="infoTerm"></span></div>
+      <div class="row"><span class="label">ที่ปรึกษา:</span> <span id="infoAdvisor"></span></div>
+      <div class="row topic">หัวข้อ: <span id="infoTopic"></span></div>
+    </div>
+
+    <div class="warning-box" id="roomWarning">
+      ⚠️ รหัสนิสิตนี้ไม่ตรงกับห้องสอบ/แผนการเรียนที่คุณเป็นกรรมการ กรุณาตรวจสอบก่อนให้คะแนน
+    </div>
+
+    <div id="scoreSection">
+      <div id="criteriaArea"></div>
+      <div class="total-preview">คะแนนรวมโดยประมาณ: <b id="totalPreview">0</b> / 10</div>
+      <button id="submitBtn">บันทึกคะแนน</button>
+    </div>
+  </div>
+
+  <div id="msg"></div>
+
+<script>
+  // ==========================================================================
+  // แก้ค่านี้เป็น URL ของ Apps Script Web App ของคุณ (จบด้วย /exec)
+  // ได้จากขั้นตอน Deploy > New deployment > Web app ใน Apps Script editor
+  // ==========================================================================
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbzYTvGLDpeLlW6FqIl1KX1tpOcatmjrnkKiUYL1jfx7tCHs8jPmX8Zm2wqMJsfR11Vm/exec';
+
+  // เกณฑ์การให้คะแนน (คัดลอกมาจาก Code.gs — ถ้าแก้เกณฑ์ฝั่ง Apps Script ต้องแก้ตรงนี้ให้ตรงกันด้วย)
+  const CRITERIA = [
+    { key: 'c1', label: 'ความชัดเจนของปัญหาและวัตถุประสงค์', weight: 3 },
+    { key: 'c2', label: 'ความเหมาะสมของขอบเขตงาน', weight: 3 },
+    { key: 'c3', label: 'ความรู้พื้นฐาน/ทบทวนเทคโนโลยีที่เกี่ยวข้อง', weight: 2 },
+    { key: 'c4', label: 'ความเป็นประโยชน์/กลุ่มผู้ใช้ที่ชัดเจน', weight: 1 },
+    { key: 'c5', label: 'การนำเสนอและตอบข้อซักถาม', weight: 1 }
+  ];
+  const SCALE_LABELS = { 0: 'ไม่ผ่าน', 1: 'ต้องปรับปรุง', 2: 'พอใช้', 3: 'ดี', 4: 'ดีเยี่ยม' };
+
+  let currentScores = {};
+  let currentStudent = null;
+  let evaluators = [];
+  let selectedEvaluatorName = '';
+  let selectedEvaluatorAssignments = [];
+
+  const STORAGE_KEY = 'proposal_scoring_evaluator_name';
+
+  if (GAS_URL.indexOf('YOUR_DEPLOYMENT_ID') !== -1) {
+    document.getElementById('configWarning').classList.add('show');
+  }
+
+  function renderCriteria() {
+    const area = document.getElementById('criteriaArea');
+    area.innerHTML = '';
+    CRITERIA.forEach(function (c) {
+      const div = document.createElement('div');
+      div.className = 'criterion';
+      let scaleHtml = '<div class="scale-row">';
+      for (let v = 0; v <= 4; v++) {
+        scaleHtml += '<label class="scale-opt" data-key="' + c.key + '" data-val="' + v + '">' +
+          '<input type="radio" name="' + c.key + '" value="' + v + '">' +
+          v + '<br>' + SCALE_LABELS[v] + '</label>';
+      }
+      scaleHtml += '</div>';
+      div.innerHTML = '<div class="crit-title">' + c.label +
+        ' <span class="crit-weight">(น้ำหนัก ' + c.weight + ' คะแนน)</span></div>' + scaleHtml;
+      area.appendChild(div);
+    });
+
+    document.querySelectorAll('.scale-opt').forEach(function (el) {
+      el.addEventListener('click', function () {
+        const key = el.getAttribute('data-key');
+        const val = Number(el.getAttribute('data-val'));
+        currentScores[key] = val;
+        document.querySelectorAll('.scale-opt[data-key="' + key + '"]').forEach(function (o) {
+          o.classList.remove('selected');
+        });
+        el.classList.add('selected');
+        updateTotalPreview();
+      });
+    });
+  }
+
+  function updateTotalPreview() {
+    let total = 0;
+    CRITERIA.forEach(function (c) {
+      const raw = currentScores[c.key] || 0;
+      total += (raw / 4) * c.weight;
+    });
+    document.getElementById('totalPreview').textContent = Math.round(total * 100) / 100;
+  }
+
+  renderCriteria();
+
+  // ---------- เรียก API: โหลดรายชื่อกรรมการ ----------
+  fetch(GAS_URL + '?action=getEvaluators')
+    .then(function (res) { return res.json(); })
+    .then(function (result) {
+      evaluators = result;
+      const sel = document.getElementById('evaluatorSelect');
+      sel.innerHTML = '<option value="">-- เลือกชื่อของคุณ --</option>';
+      evaluators.forEach(function (ev) {
+        const opt = document.createElement('option');
+        opt.value = ev.name;
+        opt.textContent = ev.name;
+        sel.appendChild(opt);
+      });
+      const otherOpt = document.createElement('option');
+      otherOpt.value = '__other__';
+      otherOpt.textContent = 'อื่นๆ (พิมพ์ชื่อเอง)';
+      sel.appendChild(otherOpt);
+
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const found = evaluators.find(function (ev) { return ev.name === saved; });
+        if (found) {
+          sel.value = saved;
+          selectEvaluator(saved, found.assignments);
+        } else {
+          sel.value = '__other__';
+          document.getElementById('evaluatorOther').style.display = 'block';
+          document.getElementById('evaluatorOther').value = saved;
+          selectEvaluator(saved, []);
+        }
+      }
+    })
+    .catch(function (err) {
+      showMsg('โหลดรายชื่อกรรมการไม่สำเร็จ: ' + err.message + ' (ตรวจสอบ GAS_URL และการ Deploy)', 'err');
+    });
+
+  document.getElementById('evaluatorSelect').addEventListener('change', function () {
+    const val = this.value;
+    const otherInput = document.getElementById('evaluatorOther');
+    if (val === '__other__') {
+      otherInput.style.display = 'block';
+      otherInput.focus();
+    } else if (val) {
+      otherInput.style.display = 'none';
+      const found = evaluators.find(function (ev) { return ev.name === val; });
+      selectEvaluator(val, found ? found.assignments : []);
+    }
+  });
+
+  document.getElementById('evaluatorOther').addEventListener('change', function () {
+    selectEvaluator(this.value.trim(), []);
+  });
+
+  function selectEvaluator(name, assignments) {
+    if (!name) return;
+    selectedEvaluatorName = name;
+    selectedEvaluatorAssignments = assignments;
+    localStorage.setItem(STORAGE_KEY, name);
+
+    document.getElementById('currentEvaluatorBadge').textContent = name;
+    const assignEl = document.getElementById('evaluatorAssignment');
+    if (assignments.length > 0) {
+      const rooms = Array.from(new Set(assignments.map(function (a) { return a.term + ' ' + a.room; })));
+      assignEl.textContent = 'ประจำ: ' + rooms.join(', ');
+    } else {
+      assignEl.textContent = '';
+    }
+
+    document.getElementById('evaluatorCard').style.display = 'none';
+    document.getElementById('mainCard').style.display = 'block';
+    document.getElementById('studentIdInput').focus();
+  }
+
+  document.getElementById('changeEvaluatorLink').addEventListener('click', function () {
+    document.getElementById('mainCard').style.display = 'none';
+    document.getElementById('evaluatorCard').style.display = 'block';
+  });
+
+  // ---------- เรียก API: ค้นหานิสิตจากรหัส ----------
+  const studentIdInput = document.getElementById('studentIdInput');
+  let lookupTimer = null;
+  studentIdInput.addEventListener('input', function () {
+    const val = this.value.trim();
+    clearTimeout(lookupTimer);
+    if (val.length >= 6) {
+      lookupTimer = setTimeout(function () { lookupStudent(val); }, 300);
+    } else {
+      resetStudentArea();
+    }
+  });
+
+  function resetStudentArea() {
+    currentStudent = null;
+    document.getElementById('studentInfo').classList.remove('show');
+    document.getElementById('roomWarning').classList.remove('show');
+    document.getElementById('scoreSection').classList.remove('show');
+  }
+
+  function lookupStudent(id) {
+    fetch(GAS_URL + '?action=getStudentById&id=' + encodeURIComponent(id))
+      .then(function (res) { return res.json(); })
+      .then(function (student) {
+        if (!student) {
+          resetStudentArea();
+          showMsg('ไม่พบรหัสนิสิต ' + id + ' กรุณาตรวจสอบอีกครั้ง', 'err');
+          return;
+        }
+        hideMsg();
+        currentStudent = student;
+        document.getElementById('infoName').textContent = student.name;
+        document.getElementById('infoRoom').textContent = student.room;
+        document.getElementById('infoTerm').textContent = student.term;
+        document.getElementById('infoAdvisor').textContent = student.advisor;
+        document.getElementById('infoTopic').textContent = student.topic;
+        document.getElementById('studentInfo').classList.add('show');
+
+        const matches = selectedEvaluatorAssignments.length === 0 || selectedEvaluatorAssignments.some(function (a) {
+          return a.term === student.term && a.room === student.room;
+        });
+        document.getElementById('roomWarning').classList.toggle('show', !matches);
+
+        currentScores = {};
+        document.querySelectorAll('.scale-opt').forEach(function (o) { o.classList.remove('selected'); });
+        updateTotalPreview();
+        document.getElementById('scoreSection').classList.add('show');
+      })
+      .catch(function (err) {
+        showMsg('ค้นหานิสิตไม่สำเร็จ: ' + err.message, 'err');
+      });
+  }
+
+  // ---------- เรียก API: บันทึกคะแนน ----------
+  document.getElementById('submitBtn').addEventListener('click', function () {
+    if (!selectedEvaluatorName) { showMsg('กรุณาเลือกชื่อกรรมการก่อน', 'err'); return; }
+    if (!currentStudent) { showMsg('กรุณาพิมพ์รหัสนิสิตให้ถูกต้องก่อน', 'err'); return; }
+    const missing = CRITERIA.filter(function (c) { return currentScores[c.key] === undefined; });
+    if (missing.length > 0) {
+      showMsg('กรุณาให้คะแนนครบทุกเกณฑ์ (ยังขาด: ' + missing.map(function (m) { return m.label; }).join(', ') + ')', 'err');
+      return;
+    }
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.textContent = 'กำลังบันทึก...';
+
+    const payload = {
+      studentId: currentStudent.id,
+      studentName: currentStudent.name,
+      room: currentStudent.room,
+      term: currentStudent.term,
+      evaluatorName: selectedEvaluatorName,
+      scores: currentScores
+    };
+
+    // สำคัญ: ไม่ตั้ง header Content-Type เป็น application/json เพราะ Apps Script
+    // จะตอบ CORS preflight (OPTIONS) ไม่ได้ — ปล่อยให้เป็น text/plain ตามค่าเริ่มต้น
+    fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (res) {
+        btn.disabled = false;
+        btn.textContent = 'บันทึกคะแนน';
+        if (res.status === 'error') {
+          showMsg('เกิดข้อผิดพลาด: ' + res.message, 'err');
+          return;
+        }
+        showMsg((res.status === 'updated' ? 'อัปเดตคะแนนเรียบร้อย' : 'บันทึกคะแนนเรียบร้อย') +
+          ' — ' + currentStudent.name + ' (คะแนนรวม ' + res.total + '/10)', 'ok');
+
+        studentIdInput.value = '';
+        resetStudentArea();
+        studentIdInput.focus();
+      })
+      .catch(function (err) {
+        btn.disabled = false;
+        btn.textContent = 'บันทึกคะแนน';
+        showMsg('เกิดข้อผิดพลาด: ' + err.message, 'err');
+      });
+  });
+
+  function showMsg(text, type) {
+    const msg = document.getElementById('msg');
+    msg.textContent = text;
+    msg.className = type;
+  }
+  function hideMsg() {
+    const msg = document.getElementById('msg');
+    msg.className = '';
+    msg.textContent = '';
+  }
+</script>
+</body>
+</html>

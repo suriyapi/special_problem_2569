@@ -354,6 +354,12 @@
   // ---------- Google Sign-In ----------
   // ยืนยันตัวตนกรรมการจริงเกิดที่ Code.gs (ตรวจ token กับ Google + ค้นชื่อจากอีเมลใน
   // ชีท Committees) ส่วนนี้แค่แสดงปุ่มและพาไปหน้าหลักเมื่อยืนยันผ่านแล้วเท่านั้น
+  //
+  // เก็บ token ไว้ใน localStorage (คีย์เดียวกับ dashboard.html เพราะอยู่โดเมนเดียวกัน)
+  // เพื่อไม่ต้อง sign in ใหม่ทุกครั้งที่สลับไปมาระหว่างหน้า/รีเฟรชหน้า — token มีอายุ
+  // แค่ ~1 ชม. เอง ถ้าหมดอายุระบบจะเด้งกลับมาให้ล็อกอินใหม่ให้อัตโนมัติ
+  const TOKEN_STORAGE_KEY = 'kupp_google_id_token';
+
   window.addEventListener('load', function () {
     if (!window.google || !google.accounts || !google.accounts.id) {
       showGateError('โหลด Google Sign-In ไม่สำเร็จ (เช็คการเชื่อมต่ออินเทอร์เน็ต)');
@@ -361,33 +367,38 @@
     }
     google.accounts.id.initialize({
       client_id: GOOGLE_CLIENT_ID,
-      callback: handleCredentialResponse
+      callback: function (response) { loginWithToken(response.credential); }
     });
     google.accounts.id.renderButton(document.getElementById('gsiButton'), {
       theme: 'outline', size: 'large', text: 'signin_with', locale: 'th'
     });
+
+    const cached = localStorage.getItem(TOKEN_STORAGE_KEY);
+    if (cached) loginWithToken(cached, true);
   });
 
-  function handleCredentialResponse(response) {
-    currentIdToken = response.credential;
+  function loginWithToken(token, silent) {
     hideGateError();
-    fetch(GAS_URL + '?action=getMyEvaluatorInfo&idToken=' + encodeURIComponent(currentIdToken))
+    fetch(GAS_URL + '?action=getMyEvaluatorInfo&idToken=' + encodeURIComponent(token))
       .then(function (res) { return res.json(); })
       .then(function (result) {
         if (!result.ok) {
-          currentIdToken = null;
-          showGateError(
-            result.reason === 'not_committee_member'
-              ? 'บัญชี ' + (result.email || '') + ' ไม่ได้เป็นกรรมการที่ลงทะเบียนไว้ กรุณาติดต่อผู้ดูแลระบบ'
-              : 'เข้าสู่ระบบไม่สำเร็จ' + (result.reason ? ' [' + result.reason + ']' : '')
-          );
+          localStorage.removeItem(TOKEN_STORAGE_KEY);
+          if (!silent) {
+            showGateError(
+              result.reason === 'not_committee_member'
+                ? 'บัญชี ' + (result.email || '') + ' ไม่ได้เป็นกรรมการที่ลงทะเบียนไว้ กรุณาติดต่อผู้ดูแลระบบ'
+                : 'เข้าสู่ระบบไม่สำเร็จ' + (result.reason ? ' [' + result.reason + ']' : '')
+            );
+          }
           return;
         }
+        currentIdToken = token;
+        localStorage.setItem(TOKEN_STORAGE_KEY, token);
         selectEvaluator(result.name, result.assignments);
       })
       .catch(function (err) {
-        currentIdToken = null;
-        showGateError('ตรวจสอบสิทธิ์ไม่สำเร็จ: ' + err.message);
+        if (!silent) showGateError('ตรวจสอบสิทธิ์ไม่สำเร็จ: ' + err.message);
       });
   }
 
@@ -439,6 +450,7 @@
     currentIdToken = null;
     selectedEvaluatorName = '';
     selectedEvaluatorAssignments = [];
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
     if (window.google && google.accounts && google.accounts.id) {
       google.accounts.id.disableAutoSelect();
     }

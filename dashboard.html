@@ -209,6 +209,10 @@
   let allStudents = [];
   let currentIdToken = null;
 
+  // เก็บ token ไว้ใน localStorage (คีย์เดียวกับ index.html เพราะอยู่โดเมนเดียวกัน)
+  // เพื่อไม่ต้อง sign in ใหม่ทุกครั้งที่สลับไปมาระหว่างหน้า/รีเฟรชหน้า
+  const TOKEN_STORAGE_KEY = 'kupp_google_id_token';
+
   function fmtTerm(term) { return TERM_LABEL[term] || term; }
 
   // ---------- Google Sign-In ----------
@@ -225,17 +229,20 @@
     }
     google.accounts.id.initialize({
       client_id: GOOGLE_CLIENT_ID,
-      callback: handleCredentialResponse
+      callback: function (response) { loginWithToken(response.credential, false); }
     });
     google.accounts.id.renderButton(document.getElementById('gsiButton'), {
       theme: 'outline', size: 'large', text: 'signin_with', locale: 'th'
     });
+
+    const cached = localStorage.getItem(TOKEN_STORAGE_KEY);
+    if (cached) loginWithToken(cached, true);
   });
 
-  function handleCredentialResponse(response) {
-    currentIdToken = response.credential;
+  function loginWithToken(token, silent) {
+    currentIdToken = token;
     document.getElementById('authErrMsg').style.display = 'none';
-    loadDashboard();
+    loadDashboard(silent);
   }
 
   function showAuthError(text) {
@@ -244,7 +251,7 @@
     el.style.display = 'block';
   }
 
-  function loadDashboard() {
+  function loadDashboard(silent) {
     if (!currentIdToken) return;
     document.getElementById('loadingMsg').style.display = 'block';
     document.getElementById('errMsg').style.display = 'none';
@@ -257,11 +264,15 @@
 
         if (data && data.status === 'unauthorized') {
           currentIdToken = null;
+          localStorage.removeItem(TOKEN_STORAGE_KEY);
           document.getElementById('loginGate').style.display = 'block';
-          showAuthError('บัญชีนี้ไม่มีสิทธิ์เข้าถึงหน้านี้' + (data.email ? ' (' + data.email + ')' : '') + (data.reason ? ' [' + data.reason + ']' : ''));
+          if (!silent) {
+            showAuthError('บัญชีนี้ไม่มีสิทธิ์เข้าถึงหน้านี้' + (data.email ? ' (' + data.email + ')' : '') + (data.reason ? ' [' + data.reason + ']' : ''));
+          }
           return;
         }
 
+        localStorage.setItem(TOKEN_STORAGE_KEY, currentIdToken);
         document.getElementById('loginGate').style.display = 'none';
         document.getElementById('dashboardContent').style.display = 'block';
         document.getElementById('updatedLabel').textContent = 'อัปเดตล่าสุด ' + new Date().toLocaleTimeString('th-TH');
@@ -272,9 +283,11 @@
       })
       .catch(function (err) {
         document.getElementById('loadingMsg').style.display = 'none';
-        const errEl = document.getElementById('errMsg');
-        errEl.textContent = 'โหลดข้อมูลไม่สำเร็จ: ' + err.message + ' (ตรวจสอบว่า Code.gs มีฟังก์ชัน getDashboard และ deploy เวอร์ชันล่าสุดแล้ว)';
-        errEl.style.display = 'block';
+        if (!silent) {
+          const errEl = document.getElementById('errMsg');
+          errEl.textContent = 'โหลดข้อมูลไม่สำเร็จ: ' + err.message + ' (ตรวจสอบว่า Code.gs มีฟังก์ชัน getDashboard และ deploy เวอร์ชันล่าสุดแล้ว)';
+          errEl.style.display = 'block';
+        }
       });
   }
 
@@ -362,7 +375,7 @@
     renderTable(filtered);
   });
 
-  document.getElementById('refreshBtn').addEventListener('click', loadDashboard);
+  document.getElementById('refreshBtn').addEventListener('click', function () { loadDashboard(false); });
 </script>
 </body>
 </html>

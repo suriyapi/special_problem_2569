@@ -55,7 +55,7 @@ function doGet(e) {
   if (action === 'getDashboard') {
     const auth = verifyGoogleIdToken(e.parameter.idToken);
     if (!auth.ok) {
-      return jsonOutput({ status: 'unauthorized', email: auth.email || null });
+      return jsonOutput({ status: 'unauthorized', email: auth.email || null, reason: auth.reason || null });
     }
     return jsonOutput(getDashboardData());
   }
@@ -98,23 +98,29 @@ function jsonOutput(obj) {
  * คืนค่า { ok: boolean, email: string|undefined }
  */
 function verifyGoogleIdToken(idToken) {
-  if (!idToken) return { ok: false };
+  if (!idToken) return { ok: false, reason: 'no_token' };
   try {
     const res = UrlFetchApp.fetch(
       'https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(idToken),
       { muteHttpExceptions: true }
     );
-    if (res.getResponseCode() !== 200) return { ok: false };
+    if (res.getResponseCode() !== 200) {
+      return { ok: false, reason: 'tokeninfo_http_' + res.getResponseCode() + ':' + res.getContentText() };
+    }
     const info = JSON.parse(res.getContentText());
 
-    if (info.aud !== DASHBOARD_GOOGLE_CLIENT_ID) return { ok: false, email: info.email };
-    if (info.email_verified !== 'true' && info.email_verified !== true) return { ok: false, email: info.email };
+    if (info.aud !== DASHBOARD_GOOGLE_CLIENT_ID) {
+      return { ok: false, email: info.email, reason: 'aud_mismatch: got=' + info.aud + ' expected=' + DASHBOARD_GOOGLE_CLIENT_ID };
+    }
+    if (info.email_verified !== 'true' && info.email_verified !== true) {
+      return { ok: false, email: info.email, reason: 'email_not_verified' };
+    }
     if (String(info.email || '').toLowerCase() !== DASHBOARD_ALLOWED_EMAIL.toLowerCase()) {
-      return { ok: false, email: info.email };
+      return { ok: false, email: info.email, reason: 'email_mismatch' };
     }
     return { ok: true, email: info.email };
   } catch (err) {
-    return { ok: false };
+    return { ok: false, reason: 'exception: ' + err.message };
   }
 }
 

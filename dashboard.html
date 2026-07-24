@@ -258,7 +258,7 @@
         if (data && data.status === 'unauthorized') {
           currentIdToken = null;
           document.getElementById('loginGate').style.display = 'block';
-          showAuthError('บัญชีนี้ไม่มีสิทธิ์เข้าถึงหน้านี้' + (data.email ? ' (' + data.email + ')' : ''));
+          showAuthError('บัญชีนี้ไม่มีสิทธิ์เข้าถึงหน้านี้' + (data.email ? ' (' + data.email + ')' : '') + (data.reason ? ' [' + data.reason + ']' : ''));
           return;
         }
 

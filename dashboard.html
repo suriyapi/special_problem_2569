@@ -278,11 +278,33 @@
     el.style.display = 'block';
   }
 
+  // รีเฟรชข้อมูลอัตโนมัติทุก 30 วินาที ขณะแท็บเปิดอยู่ (หยุดเมื่อสลับแท็บ/ย่อหน้าต่าง
+  // เพื่อไม่ยิง request ทิ้งเปล่าๆ แล้วรีเฟรชทันทีเมื่อกลับมาเปิดแท็บนี้อีกครั้ง)
+  const AUTO_REFRESH_MS = 30000;
+  let autoRefreshTimer = null;
+
+  function startAutoRefresh() {
+    stopAutoRefresh();
+    autoRefreshTimer = setInterval(function () {
+      if (document.visibilityState === 'visible') loadDashboard(true);
+    }, AUTO_REFRESH_MS);
+  }
+  function stopAutoRefresh() {
+    if (autoRefreshTimer) { clearInterval(autoRefreshTimer); autoRefreshTimer = null; }
+  }
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible' && currentIdToken) loadDashboard(true);
+  });
+
   function loadDashboard(silent) {
     if (!currentIdToken) return;
-    document.getElementById('loadingMsg').style.display = 'block';
-    document.getElementById('errMsg').style.display = 'none';
-    document.getElementById('dashboardContent').style.display = 'none';
+    const alreadyShown = document.getElementById('dashboardContent').style.display === 'block';
+    // โชว์ loading spinner เฉพาะตอนโหลดครั้งแรก — รีเฟรชเงียบๆ ระหว่างที่ข้อมูลแสดงอยู่แล้ว
+    // ไม่ซ่อน/โชว์ dashboardContent ใหม่ เพื่อไม่ให้จอกระพริบทุก 30 วิ
+    if (!alreadyShown) {
+      document.getElementById('loadingMsg').style.display = 'block';
+      document.getElementById('errMsg').style.display = 'none';
+    }
 
     fetch(GAS_URL + '?action=getDashboard&idToken=' + encodeURIComponent(currentIdToken))
       .then(function (res) { return res.json(); })
@@ -292,7 +314,9 @@
         if (data && data.status === 'unauthorized') {
           currentIdToken = null;
           localStorage.removeItem(TOKEN_STORAGE_KEY);
+          stopAutoRefresh();
           document.getElementById('loginGate').style.display = 'block';
+          document.getElementById('dashboardContent').style.display = 'none';
           if (!silent) {
             showAuthError('บัญชีนี้ไม่มีสิทธิ์เข้าถึงหน้านี้' + (data.email ? ' (' + data.email + ')' : '') + (data.reason ? ' [' + data.reason + ']' : ''));
           }
@@ -302,15 +326,15 @@
         localStorage.setItem(TOKEN_STORAGE_KEY, currentIdToken);
         document.getElementById('loginGate').style.display = 'none';
         document.getElementById('dashboardContent').style.display = 'block';
-        document.getElementById('updatedLabel').textContent = 'อัปเดตล่าสุด ' + new Date().toLocaleTimeString('th-TH');
+        document.getElementById('updatedLabel').textContent = 'อัปเดตล่าสุด ' + new Date().toLocaleTimeString('th-TH') + ' · รีเฟรชอัตโนมัติทุก 30 วิ';
         renderStats(data.stats);
         renderDupWarning(data.stats.duplicateStudentIds);
         renderRoomChart(data.byRoom);
         renderCriteriaChart(data.criteriaAverages);
         allStudents = data.students || [];
-        currentPage = 1;
         applyFilterSort();
         renderTablePage();
+        startAutoRefresh();
       })
       .catch(function (err) {
         document.getElementById('loadingMsg').style.display = 'none';

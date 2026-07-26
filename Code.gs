@@ -405,27 +405,26 @@ function getDashboardData() {
 }
 
 /**
- * สรุปความคืบหน้าของกรรมการแต่ละท่าน: ให้คะแนนไปแล้วกี่คน จาก "ที่ควรให้" กี่คน
- * (นับจากจำนวนนิสิตจริงในห้อง/แผนการเรียนที่กรรมการท่านนั้นประจำอยู่ ตามชีท Committees)
+ * สรุปความคืบหน้าของกรรมการแต่ละท่าน: ให้คะแนนนิสิตคนไหนไปแล้ว/ยังไม่ได้ให้บ้าง
+ * (เทียบจากนิสิตจริงในห้อง/แผนการเรียนที่กรรมการท่านนั้นประจำอยู่ ตามชีท Committees)
  */
 function getEvaluatorProgress(committeesData, scoresData, students) {
-  const studentCountByRoom = {};
-  students.forEach(function (s) {
-    const key = s.term + '|' + s.room;
-    studentCountByRoom[key] = (studentCountByRoom[key] || 0) + 1;
-  });
+  const studentById = {};
+  students.forEach(function (s) { studentById[s.id] = s; });
 
-  const evaluatorMap = {}; // name -> { assignments: [...], expected: n }
+  const evaluatorMap = {}; // name -> { assignments: [...], studentIds: {id: true} }
   for (let i = 1; i < committeesData.length; i++) {
     const term = committeesData[i][0], room = committeesData[i][1], name = committeesData[i][2];
     if (!name) continue;
     const key = String(name).trim();
-    if (!evaluatorMap[key]) evaluatorMap[key] = { assignments: [], expected: 0 };
+    if (!evaluatorMap[key]) evaluatorMap[key] = { assignments: [], studentIds: {} };
     evaluatorMap[key].assignments.push({ term: term, room: room });
-    evaluatorMap[key].expected += studentCountByRoom[term + '|' + room] || 0;
+    students.forEach(function (s) {
+      if (s.term === term && s.room === room) evaluatorMap[key].studentIds[s.id] = true;
+    });
   }
 
-  // นับจำนวนนิสิต "ไม่ซ้ำ" ที่กรรมการแต่ละท่านให้คะแนนแล้ว (คอลัมน์ F=ชื่อกรรมการ, B=รหัสนิสิต)
+  // นิสิตที่กรรมการแต่ละท่านให้คะแนนไปแล้ว (คอลัมน์ F=ชื่อกรรมการ, B=รหัสนิสิต)
   const doneByEvaluator = {};
   for (let i = 1; i < scoresData.length; i++) {
     const evalName = String(scoresData[i][5] || '').trim();
@@ -438,11 +437,25 @@ function getEvaluatorProgress(committeesData, scoresData, students) {
   return Object.keys(evaluatorMap).sort().map(function (name) {
     const info = evaluatorMap[name];
     const doneSet = doneByEvaluator[name] || {};
+    const doneStudents = [];
+    const pendingStudents = [];
+    Object.keys(info.studentIds).forEach(function (id) {
+      const s = studentById[id];
+      if (!s) return;
+      const entry = { id: id, name: s.name, room: s.room, term: s.term };
+      if (doneSet[id]) doneStudents.push(entry); else pendingStudents.push(entry);
+    });
+    const byName = function (a, b) { return a.name < b.name ? -1 : (a.name > b.name ? 1 : 0); };
+    doneStudents.sort(byName);
+    pendingStudents.sort(byName);
+
     return {
       name: name,
       assignments: info.assignments,
-      expected: info.expected,
-      done: Object.keys(doneSet).length
+      expected: doneStudents.length + pendingStudents.length,
+      done: doneStudents.length,
+      doneStudents: doneStudents,
+      pendingStudents: pendingStudents
     };
   });
 }

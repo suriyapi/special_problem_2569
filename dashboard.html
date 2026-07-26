@@ -112,6 +112,19 @@
   .bar-fill.status-partial { background: linear-gradient(90deg, #f0a339, #d97706); }
   .bar-fill.status-none { background: #d8ddd7; }
   .bar-row-head .badge { flex-shrink: 0; }
+  .eval-toggle { font-size: 12px; color: var(--ku-green-700); font-weight: 700; cursor: pointer; margin-top: 8px; user-select: none; }
+  .eval-toggle:hover { text-decoration: underline; }
+  .eval-detail { display: none; margin-top: 4px; }
+  .eval-detail.show { display: block; }
+  .eval-detail-section { margin-top: 8px; }
+  .eval-detail-title { font-size: 12px; font-weight: 700; margin-bottom: 6px; }
+  .eval-detail-title.done { color: var(--ku-green-700); }
+  .eval-detail-title.pending { color: var(--warn); }
+  .eval-chip-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
+  .eval-chip { font-size: 11.5px; padding: 3px 9px; border-radius: 20px; white-space: nowrap; }
+  .eval-chip.done { background: var(--ku-green-50); color: var(--ku-green-800); }
+  .eval-chip.pending { background: var(--warn-bg); color: var(--warn); }
+  .eval-empty { font-size: 12px; color: var(--ink-400); font-style: italic; }
 
   .search-input {
     width: 100%; padding: 11px 14px; font-size: 15px; border-radius: var(--radius-sm);
@@ -400,6 +413,34 @@
     });
   }
 
+  function buildEvalSection(title, list, cls) {
+    const section = document.createElement('div');
+    section.className = 'eval-detail-section';
+    const titleEl = document.createElement('div');
+    titleEl.className = 'eval-detail-title ' + cls;
+    titleEl.textContent = title + ' (' + list.length + ')';
+    section.appendChild(titleEl);
+
+    if (list.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'eval-empty';
+      empty.textContent = '— ไม่มี —';
+      section.appendChild(empty);
+      return section;
+    }
+
+    const chipWrap = document.createElement('div');
+    chipWrap.className = 'eval-chip-wrap';
+    list.forEach(function (s) {
+      const chip = document.createElement('span');
+      chip.className = 'eval-chip ' + cls;
+      chip.textContent = s.name;
+      chipWrap.appendChild(chip);
+    });
+    section.appendChild(chipWrap);
+    return section;
+  }
+
   function renderEvaluatorProgress(byEvaluator) {
     const wrap = document.getElementById('evaluatorProgress');
     wrap.innerHTML = '';
@@ -416,12 +457,35 @@
 
       const row = document.createElement('div');
       row.className = 'bar-row';
-      row.innerHTML =
-        '<div class="bar-row-head">' +
-          '<span class="label">' + ev.name + ' <span class="count">(' + roomsLabel + ')</span></span>' +
-          '<span class="badge ' + badgeCls + '">' + ev.done + '/' + ev.expected + '</span>' +
-        '</div>' +
-        '<div class="bar-track"><div class="bar-fill' + fillCls + '" style="width:' + pct + '%"></div></div>';
+
+      const head = document.createElement('div');
+      head.className = 'bar-row-head';
+      head.innerHTML =
+        '<span class="label">' + ev.name + ' <span class="count">(' + roomsLabel + ')</span></span>' +
+        '<span class="badge ' + badgeCls + '">' + ev.done + '/' + ev.expected + '</span>';
+      row.appendChild(head);
+
+      const track = document.createElement('div');
+      track.className = 'bar-track';
+      track.innerHTML = '<div class="bar-fill' + fillCls + '" style="width:' + pct + '%"></div>';
+      row.appendChild(track);
+
+      const toggle = document.createElement('div');
+      toggle.className = 'eval-toggle';
+      toggle.textContent = 'ดูรายชื่อ ▾';
+      row.appendChild(toggle);
+
+      const detail = document.createElement('div');
+      detail.className = 'eval-detail';
+      detail.appendChild(buildEvalSection('✅ ประเมินแล้ว', ev.doneStudents || [], 'done'));
+      detail.appendChild(buildEvalSection('⏳ ยังไม่ได้ประเมิน', ev.pendingStudents || [], 'pending'));
+      row.appendChild(detail);
+
+      toggle.addEventListener('click', function () {
+        const showing = detail.classList.toggle('show');
+        toggle.textContent = showing ? 'ซ่อนรายชื่อ ▲' : 'ดูรายชื่อ ▾';
+      });
+
       wrap.appendChild(row);
     });
   }

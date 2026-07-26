@@ -386,6 +386,8 @@ function getDashboardData() {
     if (s.avg !== null) allAverages.push(s.avg);
   });
 
+  const byEvaluator = getEvaluatorProgress(committeesData, scoresData, students);
+
   return {
     stats: {
       totalStudents: students.length,
@@ -396,9 +398,53 @@ function getDashboardData() {
       duplicateStudentIds: duplicateIds
     },
     byRoom: byRoom,
+    byEvaluator: byEvaluator,
     criteriaAverages: criteriaAverages,
     students: students
   };
+}
+
+/**
+ * สรุปความคืบหน้าของกรรมการแต่ละท่าน: ให้คะแนนไปแล้วกี่คน จาก "ที่ควรให้" กี่คน
+ * (นับจากจำนวนนิสิตจริงในห้อง/แผนการเรียนที่กรรมการท่านนั้นประจำอยู่ ตามชีท Committees)
+ */
+function getEvaluatorProgress(committeesData, scoresData, students) {
+  const studentCountByRoom = {};
+  students.forEach(function (s) {
+    const key = s.term + '|' + s.room;
+    studentCountByRoom[key] = (studentCountByRoom[key] || 0) + 1;
+  });
+
+  const evaluatorMap = {}; // name -> { assignments: [...], expected: n }
+  for (let i = 1; i < committeesData.length; i++) {
+    const term = committeesData[i][0], room = committeesData[i][1], name = committeesData[i][2];
+    if (!name) continue;
+    const key = String(name).trim();
+    if (!evaluatorMap[key]) evaluatorMap[key] = { assignments: [], expected: 0 };
+    evaluatorMap[key].assignments.push({ term: term, room: room });
+    evaluatorMap[key].expected += studentCountByRoom[term + '|' + room] || 0;
+  }
+
+  // นับจำนวนนิสิต "ไม่ซ้ำ" ที่กรรมการแต่ละท่านให้คะแนนแล้ว (คอลัมน์ F=ชื่อกรรมการ, B=รหัสนิสิต)
+  const doneByEvaluator = {};
+  for (let i = 1; i < scoresData.length; i++) {
+    const evalName = String(scoresData[i][5] || '').trim();
+    const sid = String(scoresData[i][1] || '').trim();
+    if (!evalName || !sid) continue;
+    if (!doneByEvaluator[evalName]) doneByEvaluator[evalName] = {};
+    doneByEvaluator[evalName][sid] = true;
+  }
+
+  return Object.keys(evaluatorMap).sort().map(function (name) {
+    const info = evaluatorMap[name];
+    const doneSet = doneByEvaluator[name] || {};
+    return {
+      name: name,
+      assignments: info.assignments,
+      expected: info.expected,
+      done: Object.keys(doneSet).length
+    };
+  });
 }
 
 /**

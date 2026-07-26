@@ -109,6 +109,9 @@
   .bar-row-head .value { font-weight: 700; color: var(--ku-green-800); flex-shrink: 0; }
   .bar-track { height: 11px; background: var(--ku-green-100); border-radius: 20px; overflow: hidden; }
   .bar-fill { height: 100%; background: linear-gradient(90deg, var(--ku-green-500), var(--ku-green-700)); border-radius: 20px; transition: width .3s ease; }
+  .bar-fill.status-partial { background: linear-gradient(90deg, #f0a339, #d97706); }
+  .bar-fill.status-none { background: #d8ddd7; }
+  .bar-row-head .badge { flex-shrink: 0; }
 
   .search-input {
     width: 100%; padding: 11px 14px; font-size: 15px; border-radius: var(--radius-sm);
@@ -200,6 +203,11 @@
       <div class="card">
         <h2>คะแนนเฉลี่ยแยกตามเกณฑ์การประเมิน</h2>
         <div id="criteriaChart"></div>
+      </div>
+
+      <div class="card">
+        <h2>ความคืบหน้าของกรรมการ</h2>
+        <div id="evaluatorProgress"></div>
       </div>
 
       <div class="card">
@@ -331,6 +339,7 @@
         renderDupWarning(data.stats.duplicateStudentIds);
         renderRoomChart(data.byRoom);
         renderCriteriaChart(data.criteriaAverages);
+        renderEvaluatorProgress(data.byEvaluator);
         allStudents = data.students || [];
         applyFilterSort();
         renderTablePage();
@@ -387,6 +396,32 @@
           '<span class="value">' + (c.avg !== null ? c.avg + '/4' : '-') + '</span>' +
         '</div>' +
         '<div class="bar-track"><div class="bar-fill" style="width:' + pct + '%"></div></div>';
+      wrap.appendChild(row);
+    });
+  }
+
+  function renderEvaluatorProgress(byEvaluator) {
+    const wrap = document.getElementById('evaluatorProgress');
+    wrap.innerHTML = '';
+    if (!byEvaluator || byEvaluator.length === 0) {
+      wrap.innerHTML = '<div class="no-results">ยังไม่มีข้อมูลกรรมการ (เช็คว่าชีท Committees มีข้อมูลหรือยัง)</div>';
+      return;
+    }
+    byEvaluator.forEach(function (ev) {
+      const status = ev.done === 0 ? 'none' : (ev.expected > 0 && ev.done >= ev.expected ? 'full' : 'partial');
+      const badgeCls = status === 'full' ? 'badge-full' : (status === 'partial' ? 'badge-partial' : 'badge-none');
+      const fillCls = status === 'full' ? '' : (status === 'partial' ? ' status-partial' : ' status-none');
+      const pct = ev.expected > 0 ? Math.max(0, Math.min(100, ev.done / ev.expected * 100)) : 0;
+      const roomsLabel = Array.from(new Set(ev.assignments.map(function (a) { return a.room + ' ' + fmtTerm(a.term); }))).join(', ');
+
+      const row = document.createElement('div');
+      row.className = 'bar-row';
+      row.innerHTML =
+        '<div class="bar-row-head">' +
+          '<span class="label">' + ev.name + ' <span class="count">(' + roomsLabel + ')</span></span>' +
+          '<span class="badge ' + badgeCls + '">' + ev.done + '/' + ev.expected + '</span>' +
+        '</div>' +
+        '<div class="bar-track"><div class="bar-fill' + fillCls + '" style="width:' + pct + '%"></div></div>';
       wrap.appendChild(row);
     });
   }

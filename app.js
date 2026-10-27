@@ -26,7 +26,7 @@ async function api(action, params = {}) {
   if (result.status === 'error') throw new Error(result.message || 'โหลดข้อมูลไม่สำเร็จ');
   return result;
 }
-function setMobileMenu(open) { $('sidebar').classList.toggle('mobile-open',open); $('navOverlay').hidden = !open; $('menuToggle').setAttribute('aria-expanded',String(open)); }
+function setMobileMenu(open) { window.SPUI.setMenu(open); }
 function allowLeave() { return !busy && (!dirty() || confirm('มีคะแนนที่ยังไม่ได้บันทึก ต้องการออกจากหน้านี้และยกเลิกการแก้ไขหรือไม่?')); }
 function navigate(view, options = {}) {
   if (!['overview','students','grade','history','guide'].includes(view)) view = 'overview';
@@ -52,9 +52,6 @@ document.addEventListener('click', event => {
   event.preventDefault(); navigate(link.getAttribute('href').slice(1));
 });
 window.addEventListener('hashchange', () => { const desired = location.hash.slice(1); if (!navigate(desired)) history.replaceState(null,'','#'+activeView); });
-$('menuToggle').addEventListener('click', () => setMobileMenu(!$('sidebar').classList.contains('mobile-open')));
-$('navOverlay').addEventListener('click', () => setMobileMenu(false));
-window.addEventListener('keydown', event => { if (event.key === 'Escape') setMobileMenu(false); });
 async function login(credential) {
   const version = ++authVersion;
   $('authStatus').textContent = 'กำลังตรวจสอบบัญชีกรรมการ…';
@@ -73,6 +70,7 @@ async function login(credential) {
 }
 function logout(expired = false) {
   if (!expired && !allowLeave()) return;
+  setMobileMenu(false);
   authVersion++; workspaceVersion++; evaluator = null; token = null; loaded = false; loading = false;
   students = []; records = []; scores = {}; originalScores = {}; selectedStudent = null; storageSet(null);
   $('appShell').hidden = true; $('loginScreen').hidden = false;

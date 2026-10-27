@@ -16,7 +16,7 @@
 3. รัน **`setupDefenseSheets`** สร้างชีทใหม่และสูตรเฉลี่ย รันซ้ำได้โดยไม่ล้างคะแนนเดิม **ห้ามรัน `setupSheets` เพราะจะล้างชีทเดิม** และไม่ต้องรัน initializeStudents/initializeCommittees
 4. ตรวจ OAuth Web Client ใน Google Cloud Console ให้ Authorized JavaScript origins มี origin ที่โฮสต์จริง เช่น `https://suriyapi.github.io` (ไม่ใส่ path ของ repository) ค่า Client ID ใน `app.js`, `dashboard.html`, `Code.gs` ต้องตรงกัน
 5. Apps Script: Deploy → Manage deployments → Edit → New version → Deploy; Execute as Me และ Who has access Anyone ตัว API ตรวจ Google ID token และอีเมลก่อนอ่านข้อมูลนิสิต/เขียนคะแนน
-6. อัปโหลด `index.html`, `styles.css`, `app.js`, `dashboard.html`, `dashboard.css`, `reference.css`, `icons.svg` ไปที่โฟลเดอร์เดียวกันบน GitHub Pages หาก URL deployment เปลี่ยน ให้แก้ GAS_URL ใน app.js และ dashboard.html
+6. อัปโหลด `index.html`, `styles.css`, `app.js`, `dashboard.html`, `dashboard.css`, `reference.css`, `responsive.css`, `ui.js`, `icons.svg` ไปที่โฟลเดอร์เดียวกันบน GitHub Pages หาก URL deployment เปลี่ยน ให้แก้ GAS_URL ใน app.js และ dashboard.html
 7. ทดสอบด้วยบัญชีกรรมการจริง: เข้าใช้งาน → ค้นรหัสนิสิตที่ตรงห้อง → ให้คะแนน → ตรวจ DefenseScores และ DefenseSummary จากนั้นทดสอบอัปเดตคะแนนซ้ำและตรวจว่าคะแนน Scores เดิมยังอยู่
 
 ระบบยังไม่ได้ deploy จาก workspace นี้ การทดสอบบัญชี Google และสิทธิ์ Apps Script จริงต้องทำหลังติดตั้ง โดยหน้าให้คะแนนจะปิดการใช้งานหาก backend ยังเป็นรุ่นเก่า
@@ -82,3 +82,14 @@ API `getMyWorkspace` ตรวจบัญชี Google ฝั่งเซิร
 แถบเมนูสีเทาอ่อน ช่องค้นหาด้านบน การ์ดสถิติ 4 ใบ กราฟรายห้อง กราฟวงกลม และตารางสถานะนิสิต ใช้ข้อมูลจริงของกรรมการที่เข้าสู่ระบบ ไม่มีตัวเลขแนวโน้มสมมติ กราฟความคืบหน้าเป็นสถานะปัจจุบัน ไม่ใช่ประวัติย้อนหลัง
 
 ช่องค้นหาด้านบนพาไปผลลัพธ์ในรายชื่อนิสิตเมื่อกด Enter และปุ่มดาวน์โหลดส่งออกคะแนนสอบวิพากษ์ของตนเองเป็น CSV ภาษาไทย ปุ่มนี้เปิดใช้งานเมื่อมีคะแนนที่บันทึกแล้วเท่านั้น
+
+### Mobile / Tablet และการทดสอบ UI
+
+- จอไม่เกิน 1100 px ใช้ hamburger drawer พร้อมแอนิเมชัน ล็อกการเลื่อนพื้นหลัง รองรับ Escape และวนโฟกัสคีย์บอร์ดภายในเมนู
+- รายชื่อบนมือถือ/แท็บเล็ตเปลี่ยนเป็นการ์ด แถบคะแนนรวมปรับขนาดและเว้นขอบปลอดภัยของอุปกรณ์
+- ช่องเลือกห้อง/หมวดใช้ listbox ร่วมกัน เพื่อให้ฟอนต์ Noto Sans Thai สม่ำเสมอ เลือกได้ด้วยลูกศร Home/End Enter และ Escape
+- Hover ใช้กับอุปกรณ์ที่มีเมาส์ และรองรับ prefers-reduced-motion
+
+ทดสอบด้วย `npm ci` แล้ว `npm run test:ui` และ `npm run test:ui:touch` สำหรับการแตะบนอุปกรณ์สัมผัส (ใช้ Google Chrome ที่ติดตั้งในเครื่อง) หรือรัน `npx playwright install chromium` และ `UI_BROWSER_CHANNEL=bundled npm run test:ui` เพื่อใช้ Chromium ของ Playwright
+
+การทดสอบ UI ใช้บัญชีและข้อมูลจำลอง ไม่อ่านหรือบันทึกคะแนนบนระบบจริง ภาพตรวจสอบจะอยู่ในโฟลเดอร์ `special-problem-ui-tests` ใต้ temporary directory ของเครื่อง

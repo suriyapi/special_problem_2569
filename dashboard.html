@@ -11,15 +11,15 @@
 
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=vh2">
-<link rel="stylesheet" href="dashboard.css?v=vh2"><link rel="stylesheet" href="reference.css?v=vh2">
+<link rel="stylesheet" href="styles.css?v=responsive1">
+<link rel="stylesheet" href="dashboard.css?v=responsive1"><link rel="stylesheet" href="reference.css?v=responsive1"><link rel="stylesheet" href="responsive.css?v=responsive1"><script src="ui.js?v=responsive1" defer></script>
 </head>
 <body>
 
 <div class="app-shell admin-shell">
-<aside class="sidebar" id="sidebar"><a class="wordmark" href="index.html"><span class="brand-icon"><svg class="icon"><use href="icons.svg#chart"/></svg></span><span>Special Problem<small>ระบบประเมินโครงงาน</small></span></a><span class="nav-label">พื้นที่ทำงาน</span><nav class="side-nav" aria-label="เมนูหลัก"><a href="index.html#overview"><svg class="icon"><use href="icons.svg#grid"/></svg>ภาพรวมงานของฉัน</a><a href="index.html#students"><svg class="icon"><use href="icons.svg#users"/></svg>รายชื่อนิสิต</a><a href="index.html#history"><svg class="icon"><use href="icons.svg#clock"/></svg>ประวัติการประเมิน</a><a href="index.html#guide"><svg class="icon"><use href="icons.svg#book"/></svg>คู่มือและเกณฑ์</a><a href="dashboard.html" aria-current="page"><svg class="icon"><use href="icons.svg#chart"/></svg>แดชบอร์ดผู้ดูแล</a></nav><div class="sidebar-course"><span class="badge info">สำหรับผู้ดูแลระบบ</span><strong>ภาพรวมทั้งรายวิชา</strong><span>ตรวจคะแนนและความคืบหน้าทุกห้อง</span></div><div class="sidebar-bottom"><div class="account-person"><span class="avatar"><svg class="icon"><use href="icons.svg#shield"/></svg></span><div><strong>ผู้ดูแลรายวิชา</strong><small>จำกัดสิทธิ์การเข้าถึง</small></div></div><button class="sign-out" id="adminLogout">ออกจากระบบ</button></div></aside>
+<aside class="sidebar" id="sidebar"><button id="closeMobileMenu" class="icon-button drawer-close" aria-label="ปิดเมนู"><span aria-hidden="true">×</span></button><a class="wordmark" href="index.html"><span class="brand-icon"><svg class="icon"><use href="icons.svg#chart"/></svg></span><span>Special Problem<small>ระบบประเมินโครงงาน</small></span></a><span class="nav-label">พื้นที่ทำงาน</span><nav class="side-nav" aria-label="เมนูหลัก"><a href="index.html#overview"><svg class="icon"><use href="icons.svg#grid"/></svg>ภาพรวมงานของฉัน</a><a href="index.html#students"><svg class="icon"><use href="icons.svg#users"/></svg>รายชื่อนิสิต</a><a href="index.html#history"><svg class="icon"><use href="icons.svg#clock"/></svg>ประวัติการประเมิน</a><a href="index.html#guide"><svg class="icon"><use href="icons.svg#book"/></svg>คู่มือและเกณฑ์</a><a href="dashboard.html" aria-current="page"><svg class="icon"><use href="icons.svg#chart"/></svg>แดชบอร์ดผู้ดูแล</a></nav><div class="sidebar-course"><span class="badge info">สำหรับผู้ดูแลระบบ</span><strong>ภาพรวมทั้งรายวิชา</strong><span>ตรวจคะแนนและความคืบหน้าทุกห้อง</span></div><div class="sidebar-bottom"><div class="account-person"><span class="avatar"><svg class="icon"><use href="icons.svg#shield"/></svg></span><div><strong>ผู้ดูแลรายวิชา</strong><small>จำกัดสิทธิ์การเข้าถึง</small></div></div><button class="sign-out" id="adminLogout">ออกจากระบบ</button></div></aside>
 <button class="nav-overlay" id="navOverlay" aria-label="ปิดเมนู" hidden></button>
-<div class="app-main"><header class="app-topbar"><div class="topbar-left"><button class="icon-button mobile-only" id="menuToggle" aria-label="เปิดเมนู" aria-expanded="false"><svg class="icon"><use href="icons.svg#menu"/></svg></button><form id="adminGlobalSearchForm" class="global-search" role="search"><svg class="icon"><use href="icons.svg#search"/></svg><input id="adminGlobalSearch" type="search" placeholder="ค้นหานิสิต รหัส หรือหัวข้อโครงงาน…" aria-label="ค้นหานิสิตในแดชบอร์ด" enterkeyhint="search" disabled><kbd>↵</kbd></form></div><div class="topbar-right"><span class="badge neutral">ผู้ดูแลระบบ</span><span class="topbar-divider"></span><span class="avatar top-avatar"><svg class="icon"><use href="icons.svg#shield"/></svg></span></div></header>
+<div class="app-main"><header class="app-topbar"><div class="topbar-left"><button class="icon-button mobile-only" id="menuToggle" aria-controls="sidebar" aria-label="เปิดเมนู" aria-expanded="false"><span class="hamburger-lines" aria-hidden="true"><span></span><span></span><span></span></span></button><form id="adminGlobalSearchForm" class="global-search" role="search"><svg class="icon"><use href="icons.svg#search"/></svg><input id="adminGlobalSearch" type="search" placeholder="ค้นหานิสิต รหัส หรือหัวข้อโครงงาน…" aria-label="ค้นหานิสิตในแดชบอร์ด" enterkeyhint="search" disabled><kbd>↵</kbd></form></div><div class="topbar-right"><span class="badge neutral">ผู้ดูแลระบบ</span><span class="topbar-divider"></span><span class="avatar top-avatar"><svg class="icon"><use href="icons.svg#shield"/></svg></span></div></header>
 <main class="content page">
 <div class="page-heading"><div><span class="breadcrumb">ผู้ดูแลรายวิชา / ภาพรวม</span><h1>ภาพรวมผลการประเมิน</h1><p>ติดตามความคืบหน้าทุกห้องสอบ และตรวจจำนวนกรรมการที่ประเมินครบ</p></div><a href="index.html#overview" class="btn secondary">กลับพื้นที่ให้คะแนน</a></div>
     <div class="state-msg" id="loginGate">
@@ -62,7 +62,7 @@
 
       <div class="card">
         <h2>รายชื่อนิสิตทั้งหมด</h2>
-        <div class="admin-table-filters"><input type="search" id="searchInput" class="search-input" placeholder="ค้นหารหัสนิสิต / ชื่อ / หัวข้อ" aria-label="ค้นหานิสิต"><select id="dashboardRoomFilter" aria-label="กรองห้องสอบ"><option value="">ทุกห้อง / แผนการเรียน</option></select></div>
+        <div class="admin-table-filters"><input type="search" id="searchInput" class="search-input" placeholder="ค้นหารหัสนิสิต / ชื่อ / หัวข้อ" aria-label="ค้นหานิสิต"><select id="dashboardRoomFilter" aria-label="กรองห้องสอบ"><option value="">ทุกห้อง / แผนการเรียน</option></select><div class="mobile-sort"><select id="dashboardSort" aria-label="เรียงลำดับรายชื่อนิสิต"><option value="">เรียงลำดับ</option><option value="name:1">ชื่อ ก–ฮ</option><option value="avg:-1">คะแนนมากไปน้อย</option><option value="avg:1">คะแนนน้อยไปมาก</option><option value="count:-1">จำนวนกรรมการมากไปน้อย</option><option value="room:1">ห้องสอบ</option></select></div></div>
         <div class="table-wrap">
           <table>
             <thead>
@@ -487,8 +487,17 @@
     loadDashboard(false);
   });
 
+  document.getElementById('dashboardSort').addEventListener('change', function() {
+    const parts = this.value.split(':'); sortKey = parts[0] || null; sortDir = Number(parts[1] || 1); currentPage = 1;
+    document.querySelectorAll('th.sortable').forEach(function(th) {
+      th.setAttribute('aria-sort', th.dataset.sort === sortKey ? (sortDir === 1 ? 'ascending' : 'descending') : 'none');
+      th.querySelector('.sort-arrow').textContent = th.dataset.sort === sortKey ? (sortDir === 1 ? '▲' : '▼') : '';
+    });
+    applyFilterSort(); renderTablePage();
+  });
   document.getElementById('dashboardRoomFilter').addEventListener('change', function() { currentPage = 1; applyFilterSort(); renderTablePage(); });
   document.getElementById('adminLogout').addEventListener('click', function() {
+    window.SPUI.setMenu(false);
     document.getElementById('adminGlobalSearch').disabled = true;
     currentIdToken = null; requestVersion++; sessionStorage.removeItem(TOKEN_STORAGE_KEY); stopAutoRefresh();
     document.getElementById('dashboardContent').style.display = 'none';
@@ -496,14 +505,6 @@
     document.getElementById('loadingMsg').style.display = 'none';
     if (window.google && google.accounts) google.accounts.id.disableAutoSelect();
   });
-  function toggleAdminMenu(open) {
-    document.getElementById('sidebar').classList.toggle('mobile-open', open);
-    document.getElementById('navOverlay').hidden = !open;
-    document.getElementById('menuToggle').setAttribute('aria-expanded', String(open));
-  }
-  document.getElementById('menuToggle').addEventListener('click', function() { toggleAdminMenu(!document.getElementById('sidebar').classList.contains('mobile-open')); });
-  document.getElementById('navOverlay').addEventListener('click', function() { toggleAdminMenu(false); });
-  document.addEventListener('keydown', function(event) { if (event.key === 'Escape') toggleAdminMenu(false); });
   document.getElementById('adminGlobalSearchForm').addEventListener('submit', function(event) {
     event.preventDefault(); if (!currentIdToken) return;
     document.getElementById('searchInput').value = document.getElementById('adminGlobalSearch').value;

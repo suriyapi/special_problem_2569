@@ -3,7 +3,7 @@
  * Google Apps Script + Google Sheets
  *
  * Flow การใช้งาน (เวอร์ชันนี้):
- *   1) กรรมการเลือกชื่อตัวเอง 1 ครั้งตอนเปิดเว็บ (ระบบจำไว้ในเบราว์เซอร์ ไม่ต้องเลือกซ้ำ)
+ *   1) กรรมการเข้าสู่ระบบด้วย Google account ที่มีอีเมลใน Committees
  *   2) พิมพ์รหัสนิสิต -> ระบบดึงชื่อ / ห้องสอบ / แผนการเรียน / ที่ปรึกษา / หัวข้อ ให้อัตโนมัติ
  *   3) ให้คะแนน 5 เกณฑ์ -> กดบันทึก -> ฟอร์มเคลียร์ตัวเอง พร้อมรับนิสิตคนถัดไปทันที
  *
@@ -11,7 +11,8 @@
  *   - Students   : รายชื่อนิสิตทั้งหมด + หัวข้อปัญหาพิเศษ
  *   - Committees : รายชื่อกรรมการประจำแต่ละห้อง/แผนการเรียน (คงที่ทั้งวัน)
  *   - Scores     : คะแนนดิบที่กรรมการแต่ละท่านกรอก (1 แถวต่อ 1 คน ต่อ 1 นิสิต)
- *   - Summary    : สรุปคะแนนเฉลี่ยต่อคน (คำนวณอัตโนมัติด้วยสูตร)
+ *   - Summary    : สรุปคะแนนหัวข้อเดิม
+ *   - DefenseScores / DefenseSummary : คะแนนสอบวิพากษ์และสรุปเฉลี่ย (แยกจากคะแนนเดิม)
  *
  * Scores columns: A Timestamp, B รหัสนิสิต, C ชื่อนิสิต, D ห้องสอบ, E แผนการเรียน,
  *                  F ชื่อกรรมการ, G-K คะแนนดิบ 5 เกณฑ์, L คะแนนรวม (เต็ม 10)
@@ -25,6 +26,27 @@ const CRITERIA = [
   { key: 'c4', label: 'ความเป็นประโยชน์/กลุ่มผู้ใช้ที่ชัดเจน', weight: 1 },
   { key: 'c5', label: 'การนำเสนอและตอบข้อซักถาม', weight: 1 }
 ];
+
+// หมวดที่เปิดใช้งานแยกชีท เพื่อรักษาคะแนนหัวข้อเดิม
+const DEFENSE_CRITERIA = [
+  { key: 'c1', label: 'ระบบสารสนเทศและการแก้ปัญหา', weight: 6, mapping: 'CLO1 → PLO1', evidence: 'สาธิตฟังก์ชันหลัก ผลลัพธ์ถูกต้อง และแก้ปัญหาของโครงงานได้', levels: ['ไม่มีหลักฐานว่าระบบทำงานหรือแก้ปัญหาได้', 'ฟังก์ชันหลักผิดพลาดมาก สาธิตได้จำกัด', 'ระบบทำงานและแก้ปัญหาได้บางส่วน', 'ฟังก์ชันหลักทำงานได้ มีข้อบกพร่องเล็กน้อย', 'ฟังก์ชันหลักครบ ผลลัพธ์ถูกต้อง แก้ปัญหาได้ชัดเจน'] },
+  { key: 'c2', label: 'เทคโนโลยี ฐานข้อมูล และโครงสร้างโปรแกรม', weight: 3, mapping: 'CLO2 → PLO2', evidence: 'เหตุผลเลือกเทคโนโลยี การจัดเก็บข้อมูล และโครงสร้างโปรแกรม', levels: ['อธิบายเทคโนโลยีและการออกแบบไม่ได้', 'อธิบายได้จำกัด มีข้อบกพร่องสำคัญ', 'มีเหตุผลบางส่วน การออกแบบยังมีจุดอ่อน', 'เลือกใช้เหมาะสม อธิบายการออกแบบได้เป็นส่วนใหญ่', 'เปรียบเทียบทางเลือกได้ ออกแบบข้อมูลและโปรแกรมเป็นระบบเหมาะกับงาน'] },
+  { key: 'c3', label: 'ความต้องการ การบูรณาการ และความปลอดภัย', weight: 5, mapping: 'CLO3 → PLO3', evidence: 'เชื่อมความต้องการผู้ใช้กับผลงาน ผลทดสอบ และการปกป้องข้อมูล', levels: ['ไม่มีหลักฐานด้านความต้องการ การทดสอบ และความปลอดภัย', 'ขาดความต้องการสำคัญ หลักฐานทดสอบหรือปกป้องข้อมูลน้อย', 'ตรงความต้องการบางส่วน การทดสอบหรือความปลอดภัยยังไม่ครบ', 'ตรงความต้องการหลัก มีผลทดสอบและมาตรการความปลอดภัย ขาดเล็กน้อย', 'ตรงความต้องการหลัก ทดสอบครอบคลุม มีหลักฐานมาตรการความปลอดภัยเหมาะสม'] },
+  { key: 'c4', label: 'ความรับผิดชอบและความซื่อสัตย์', weight: 2, mapping: 'CLO4 → PLO6', evidence: 'บทบาทรายบุคคล หลักฐานการลงมือทำ และการรายงานข้อจำกัดตามจริง (หลักฐานในบริบทโครงงาน)', levels: ['ไม่มีหลักฐานหรืออธิบายงานที่รับผิดชอบไม่ได้', 'บทบาทไม่ชัด อธิบายงานได้จำกัด หลักฐานน้อย', 'ระบุบทบาทได้ แต่หลักฐานหรือผลงานยังไม่ครบ', 'อธิบายบทบาทและงานได้ มีหลักฐานเป็นส่วนใหญ่', 'บทบาทชัด มีหลักฐานสอดคล้องกับงาน เปิดเผยข้อจำกัดตามจริง'] },
+  { key: 'c5', label: 'การสื่อสาร การทำงานร่วมกัน และจริยธรรม IT/AI', weight: 4, mapping: 'CLO5 → PLO4, PLO5', evidence: 'นำเสนอ ตอบคำถาม ประสานงาน อ้างอิง และเปิดเผย/ตรวจสอบการใช้ AI โดยไม่หักคะแนนเพียงเพราะใช้ AI', levels: ['ไม่มีหลักฐานเพียงพอสำหรับประเมิน', 'สื่อสารไม่ชัด ตอบได้น้อย ขาดประเด็นการทำงานร่วมกันหรือจริยธรรม', 'สื่อสารและอธิบายการทำงานร่วมกันกับจริยธรรมได้บางส่วน', 'สื่อสารดี มีหลักฐานทำงานร่วมกันและคำนึงถึงจริยธรรม ขาดเล็กน้อย', 'นำเสนอเป็นลำดับ ตอบมีเหตุผล ประสานงาน อ้างอิงและใช้ IT/AI อย่างรับผิดชอบครบถ้วน'] }
+];
+const ASSESSMENTS = {
+  proposal: { id: 'proposal', label: 'หัวข้อโครงงาน', max: 10, status: 'completed', sheet: 'Scores', criteria: CRITERIA },
+  advisor: { id: 'advisor', label: 'อาจารย์ที่ปรึกษา', max: 50, status: 'planned', criteria: [] },
+  progress: { id: 'progress', label: 'รายงานความก้าวหน้า', max: 20, status: 'planned', criteria: [] },
+  defense: { id: 'defense', label: 'สอบวิพากษ์', max: 20, status: 'open', sheet: 'DefenseScores', criteria: DEFENSE_CRITERIA }
+};
+
+function getAssessment(id) {
+  const key = id || 'proposal';
+  if (!Object.prototype.hasOwnProperty.call(ASSESSMENTS, key)) throw new Error('ไม่พบหมวดคะแนน');
+  return ASSESSMENTS[key];
+}
 
 const SCALE_LABELS = {
   0: 'ไม่ผ่าน',
@@ -47,10 +69,15 @@ function doGet(e) {
     return jsonOutput(getEvaluators());
   }
   if (action === 'getStudentById') {
+    const auth = getMyEvaluatorInfo(e.parameter.idToken);
+    if (!auth.ok) return jsonOutput({ status: 'unauthorized', reason: auth.reason });
     return jsonOutput(getStudentById(e.parameter.id));
   }
   if (action === 'getCriteria') {
-    return jsonOutput({ criteria: CRITERIA, scaleLabels: SCALE_LABELS });
+    return jsonOutput({ assessments: Object.keys(ASSESSMENTS).map(function (key) {
+      const a = ASSESSMENTS[key];
+      return { id: a.id, label: a.label, max: a.max, status: a.status, criteria: a.criteria };
+    }), scaleLabels: SCALE_LABELS });
   }
   if (action === 'getMyEvaluatorInfo') {
     return jsonOutput(getMyEvaluatorInfo(e.parameter.idToken));
@@ -60,17 +87,13 @@ function doGet(e) {
     if (!auth.ok) {
       return jsonOutput({ status: 'unauthorized', email: auth.email || null, reason: auth.reason || null });
     }
-    return jsonOutput(getDashboardData());
+    const assessment = getAssessment(e.parameter.assessment);
+    if (!assessment.sheet) return jsonOutput({ status: 'error', message: 'หมวดนี้ยังไม่เปิดใช้งาน' });
+    return jsonOutput(getDashboardData(assessment.id));
   }
 
-  // --- โหมดหน้าเว็บปกติ (เปิด URL ของ Apps Script ตรงๆ โดยไม่มี ?action) ---
-  const tpl = HtmlService.createTemplateFromFile('Index');
-  tpl.criteria = CRITERIA;
-  tpl.scaleLabels = SCALE_LABELS;
-  return tpl.evaluate()
-    .setTitle('ให้คะแนนข้อเสนอหัวข้อ - ปัญหาพิเศษ')
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  // หน้าใช้งานจริงโฮสต์แบบ static; deployment นี้ให้บริการ API
+  return HtmlService.createHtmlOutput('<!doctype html><html lang="th"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>API ประเมินโครงงาน</title><body style="font-family:sans-serif;padding:32px"><h1>ระบบประเมินโครงงาน 02739498</h1><p>API พร้อมให้บริการ กรุณาเปิดหน้าเว็บ GitHub Pages ของรายวิชาเพื่อเข้าสู่ระบบและให้คะแนน</p></body></html>');
 }
 
 /**
@@ -227,49 +250,79 @@ function getStudentById(studentId) {
  *   scores: { c1: 0-4, c2: 0-4, c3: 0-4, c4: 0-4, c5: 0-4 }
  * }
  *
- * หมายเหตุ: เวอร์ชันนี้ "เชื่อ" ชื่อกรรมการที่ส่งมาจาก client ตรงๆ (ปิดระบบ
- * ยืนยันตัวตนกรรมการด้วย Google login ไว้ก่อนตามที่ขอ — ถ้าจะเปิดใหม่
- * ดูฟังก์ชัน getMyEvaluatorInfo / findEvaluatorByEmail ที่ยังเก็บไว้เผื่อใช้)
+ * ยืนยัน Google ID token และอ่านตัวตน/ข้อมูลนิสิตจากชีทฝั่งเซิร์ฟเวอร์
  */
 function submitScore(payload) {
-  const sheet = getSS().getSheetByName('Scores');
-  const data = sheet.getDataRange().getValues();
-
+  if (!payload || !payload.scores) throw new Error('ข้อมูลคะแนนไม่ครบ');
+  const auth = getMyEvaluatorInfo(payload.idToken);
+  if (!auth.ok) return { status: 'unauthorized', message: 'กรุณาเข้าสู่ระบบด้วยอีเมลกรรมการใน Committees', reason: auth.reason };
+  const assessment = getAssessment(payload.assessment);
+  if (assessment.status !== 'open') throw new Error('หมวดนี้ยังไม่เปิดรับคะแนนหรือปิดการประเมินแล้ว');
+  const student = getStudentById(payload.studentId);
+  if (!student) throw new Error('ไม่พบรหัสนิสิต');
+  if (!auth.assignments.some(function (a) { return a.term === student.term && a.room === student.room; })) {
+    throw new Error('นิสิตไม่อยู่ในห้องสอบ/แผนการเรียนที่ได้รับมอบหมาย');
+  }
   let total = 0;
-  const rawValues = [];
-  CRITERIA.forEach(function (c) {
-    const raw = Number(payload.scores[c.key]);
-    rawValues.push(raw);
-    total += (raw / 4) * c.weight;
+  const rawValues = assessment.criteria.map(function (c) {
+    const raw = payload.scores[c.key];
+    if (typeof raw !== 'number' || !Number.isInteger(raw) || raw < 0 || raw > 4) throw new Error('คะแนนต้องเป็นจำนวนเต็ม 0–4 ครบทุกเกณฑ์');
+    total += raw / 4 * c.weight;
+    return raw;
   });
   total = Math.round(total * 100) / 100;
-
-  const newRow = [
-    new Date(),
-    payload.studentId,
-    payload.studentName,
-    payload.room,
-    payload.term,
-    payload.evaluatorName
-  ].concat(rawValues).concat([total]);
-
-  // หาแถวเดิมของกรรมการท่านนี้ + นิสิตคนนี้ (คอลัมน์ B=รหัสนิสิต, F=ชื่อกรรมการ)
-  let existingRow = -1;
-  for (let i = 1; i < data.length; i++) {
-    if (String(data[i][1]).trim() === String(payload.studentId).trim() &&
-        String(data[i][5]).trim() === String(payload.evaluatorName).trim()) {
-      existingRow = i + 1;
-      break;
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const sheet = getSS().getSheetByName(assessment.sheet);
+    if (!sheet) throw new Error('ยังไม่ได้เตรียมชีทสอบวิพากษ์ กรุณารัน setupDefenseSheets');
+    const data = sheet.getDataRange().getValues();
+    const newRow = [new Date(), student.id, student.name, student.room, student.term, auth.name]
+      .concat(rawValues).concat([total, auth.email]);
+    let existingRow = -1;
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][1]).trim() === String(student.id).trim() &&
+          String(data[i][12] || '').trim().toLowerCase() === auth.email.toLowerCase()) {
+        existingRow = i + 1;
+        break;
+      }
     }
+    if (existingRow > 0) sheet.getRange(existingRow, 1, 1, newRow.length).setValues([newRow]);
+    else sheet.appendRow(newRow);
+    SpreadsheetApp.flush();
+    return { status: existingRow > 0 ? 'updated' : 'created', total: total, assessment: assessment.id };
+  } finally {
+    lock.releaseLock();
   }
+}
 
-  if (existingRow > 0) {
-    sheet.getRange(existingRow, 1, 1, newRow.length).setValues([newRow]);
-    return { status: 'updated', total: total };
-  } else {
-    sheet.appendRow(newRow);
-    return { status: 'created', total: total };
+/** เพิ่มเฉพาะชีทใหม่ ไม่ล้างคะแนนหรือรายชื่อเดิม รันซ้ำได้ */
+function setupDefenseSheets() {
+  const ss = getSS();
+  let scores = ss.getSheetByName('DefenseScores');
+  if (!scores) scores = ss.insertSheet('DefenseScores');
+  if (scores.getLastRow() === 0) {
+    const header = ['Timestamp', 'รหัสนิสิต', 'ชื่อนิสิต', 'ห้องสอบ', 'แผนการเรียน', 'ชื่อกรรมการผู้ประเมิน'];
+    DEFENSE_CRITERIA.forEach(function (c) { header.push(c.label + ' (0-4)'); });
+    scores.getRange(1, 1, 1, 13).setValues([header.concat(['คะแนนรวม (เต็ม 20)', 'อีเมลกรรมการ'])]);
+    scores.setFrozenRows(1);
   }
+  let summary = ss.getSheetByName('DefenseSummary');
+  if (!summary) summary = ss.insertSheet('DefenseSummary');
+  summary.getRange(1, 1, 1, 4).setValues([['รหัสนิสิต', 'ชื่อนิสิต', 'จำนวนกรรมการที่ประเมินแล้ว', 'คะแนนเฉลี่ย (เต็ม 20)']]);
+  const students = ss.getSheetByName('Students');
+  if (!students) throw new Error('ไม่พบชีท Students');
+  const n = students.getLastRow() - 1;
+  if (n > 0) {
+    const formulas = [];
+    for (let r = 2; r <= n + 1; r++) {
+      formulas.push(['=Students!A' + r, '=Students!B' + r,
+        '=COUNTIF(DefenseScores!B:B,A' + r + ')',
+        '=IF(C' + r + '=0,"-",AVERAGEIF(DefenseScores!B:B,A' + r + ',DefenseScores!L:L))']);
+    }
+    summary.getRange(2, 1, n, 4).setFormulas(formulas);
+  }
+  summary.setFrozenRows(1);
 }
 
 /**
@@ -278,10 +331,13 @@ function submitScore(payload) {
  * - byRoom: เฉลี่ย + ความคืบหน้า แยกตามห้องสอบ/แผนการเรียน
  * - students: รายนิสิตทุกคนพร้อมจำนวนกรรมการที่ประเมินแล้วและคะแนนเฉลี่ย
  */
-function getDashboardData() {
+function getDashboardData(assessmentId) {
+  const assessment = getAssessment(assessmentId);
+  const criteria = assessment.criteria;
   const ss = getSS();
   const studentsData = ss.getSheetByName('Students').getDataRange().getValues();
-  const scoresData = ss.getSheetByName('Scores').getDataRange().getValues();
+  const scoreSheet = ss.getSheetByName(assessment.sheet);
+  const scoresData = scoreSheet ? scoreSheet.getDataRange().getValues() : [];
   const committeesData = ss.getSheetByName('Committees').getDataRange().getValues();
 
   // จำนวนกรรมการที่ควรมีต่อ (แผนการเรียน+ห้องสอบ) หนึ่งชุด
@@ -298,17 +354,17 @@ function getDashboardData() {
   for (let i = 1; i < scoresData.length; i++) {
     const id = String(scoresData[i][1]).trim();
     if (!id) continue;
-    const total = Number(scoresData[i][scoresData[i].length - 1]);
+    const total = Number(scoresData[i][11]);
     if (!scoreMap[id]) scoreMap[id] = [];
     scoreMap[id].push(total);
   }
 
   // เฉลี่ยคะแนนดิบแต่ละเกณฑ์ (คอลัมน์ G-K) จากทุกแถวใน Scores — ใช้ทำกราฟสรุปรายเกณฑ์
   const CRITERIA_COL_OFFSET = 6; // A=0..F=5, G เริ่มที่ index 6
-  const criteriaTotals = CRITERIA.map(function () { return { sum: 0, count: 0 }; });
+  const criteriaTotals = criteria.map(function () { return { sum: 0, count: 0 }; });
   for (let i = 1; i < scoresData.length; i++) {
     if (!String(scoresData[i][1]).trim()) continue;
-    CRITERIA.forEach(function (c, idx) {
+    criteria.forEach(function (c, idx) {
       const raw = Number(scoresData[i][CRITERIA_COL_OFFSET + idx]);
       if (!isNaN(raw)) {
         criteriaTotals[idx].sum += raw;
@@ -316,7 +372,7 @@ function getDashboardData() {
       }
     });
   }
-  const criteriaAverages = CRITERIA.map(function (c, idx) {
+  const criteriaAverages = criteria.map(function (c, idx) {
     const t = criteriaTotals[idx];
     return {
       key: c.key,
@@ -389,6 +445,7 @@ function getDashboardData() {
   const byEvaluator = getEvaluatorProgress(committeesData, scoresData, students);
 
   return {
+    assessment: { id: assessment.id, label: assessment.label, max: assessment.max },
     stats: {
       totalStudents: students.length,
       evaluatedFull: evaluatedFull,

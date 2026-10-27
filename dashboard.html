@@ -177,7 +177,7 @@
       <span class="topbar-icon">📊</span>
       <div>
         <div class="topbar-title">แดชบอร์ดสรุปผลการประเมิน</div>
-        <div class="topbar-sub">ข้อเสนอหัวข้อปัญหาพิเศษ · ปีการศึกษา 2569</div>
+        <div class="topbar-sub">คะแนนโครงงานแยกตามหมวด · ปีการศึกษา 2569</div>
       </div>
     </div>
   </header>
@@ -199,6 +199,8 @@
     <div class="state-msg err" id="errMsg" style="display:none;"></div>
 
     <div id="dashboardContent" style="display:none;">
+      <label for="assessmentSelect">หมวดคะแนน</label>
+      <select id="assessmentSelect" style="padding:12px;width:100%;margin-bottom:16px;font:inherit;border:1px solid #dbe6d8;border-radius:9px"><option value="defense">สอบวิพากษ์ · 20 คะแนน</option><option value="proposal">หัวข้อโครงงาน · 10 คะแนน</option><option disabled>อาจารย์ที่ปรึกษา · 50 คะแนน · ยังไม่เปิด</option><option disabled>รายงานความก้าวหน้า · 20 คะแนน · ยังไม่เปิด</option></select>
       <div class="toolbar">
         <span class="updated-label" id="updatedLabel"></span>
         <button class="refresh-btn" id="refreshBtn">↻ รีเฟรช</button>
@@ -256,9 +258,10 @@
   const TERM_LABEL = { 'ปกติ': 'ภาคปกติ', 'พิเศษ': 'ภาคพิเศษ' };
   let allStudents = [];
   let currentIdToken = null;
+  let dashboardMax = 20;
+  let requestVersion = 0;
 
-  // เก็บ token ไว้ใน localStorage (คีย์เดียวกับ index.html เพราะอยู่โดเมนเดียวกัน)
-  // เพื่อไม่ต้อง sign in ใหม่ทุกครั้งที่สลับไปมาระหว่างหน้า/รีเฟรชหน้า
+  // เก็บ token เฉพาะ session ของแดชบอร์ด
   const TOKEN_STORAGE_KEY = 'kupp_google_id_token';
 
   function fmtTerm(term) { return TERM_LABEL[term] || term; }
@@ -283,7 +286,7 @@
       theme: 'outline', size: 'large', text: 'signin_with', locale: 'th'
     });
 
-    const cached = localStorage.getItem(TOKEN_STORAGE_KEY);
+    const cached = sessionStorage.getItem(TOKEN_STORAGE_KEY);
     if (cached) loginWithToken(cached, true);
   });
 
@@ -327,14 +330,20 @@
       document.getElementById('errMsg').style.display = 'none';
     }
 
-    fetch(GAS_URL + '?action=getDashboard&idToken=' + encodeURIComponent(currentIdToken))
+    const version = ++requestVersion;
+    const assessmentId = document.getElementById('assessmentSelect').value;
+    fetch(GAS_URL + '?action=getDashboard&assessment=' + assessmentId + '&idToken=' + encodeURIComponent(currentIdToken))
       .then(function (res) { return res.json(); })
       .then(function (data) {
+        if (version !== requestVersion) return;
+        if (data.status === 'error') throw new Error(data.message);
+        if (data.status !== 'unauthorized' && !data.assessment) throw new Error('กรุณา Deploy Code.gs เวอร์ชันใหม่');
+        dashboardMax = data.assessment ? data.assessment.max : dashboardMax;
         document.getElementById('loadingMsg').style.display = 'none';
 
         if (data && data.status === 'unauthorized') {
           currentIdToken = null;
-          localStorage.removeItem(TOKEN_STORAGE_KEY);
+          sessionStorage.removeItem(TOKEN_STORAGE_KEY);
           stopAutoRefresh();
           document.getElementById('loginGate').style.display = 'block';
           document.getElementById('dashboardContent').style.display = 'none';
@@ -344,7 +353,7 @@
           return;
         }
 
-        localStorage.setItem(TOKEN_STORAGE_KEY, currentIdToken);
+        sessionStorage.setItem(TOKEN_STORAGE_KEY, currentIdToken);
         document.getElementById('loginGate').style.display = 'none';
         document.getElementById('dashboardContent').style.display = 'block';
         document.getElementById('updatedLabel').textContent = 'อัปเดตล่าสุด ' + new Date().toLocaleTimeString('th-TH') + ' · รีเฟรชอัตโนมัติทุก 30 วิ';
@@ -371,7 +380,7 @@
   function renderStats(stats) {
     const tiles = [
       { label: 'นิสิตทั้งหมด', value: stats.totalStudents, cls: '' },
-      { label: 'คะแนนเฉลี่ยรวม', value: stats.overallAverage !== null ? stats.overallAverage + '/10' : '-', cls: 'avg' },
+      { label: 'คะแนนเฉลี่ยรวม', value: stats.overallAverage !== null ? stats.overallAverage + '/' + dashboardMax : '-', cls: 'avg' },
       { label: 'ประเมินครบแล้ว', value: stats.evaluatedFull, cls: 'full' },
       { label: 'ประเมินบางส่วน', value: stats.evaluatedPartial, cls: 'partial' }
     ];
@@ -498,14 +507,14 @@
       return;
     }
     byRoom.forEach(function (g) {
-      const pct = g.avg !== null ? Math.max(0, Math.min(100, g.avg / 10 * 100)) : 0;
+      const pct = g.avg !== null ? Math.max(0, Math.min(100, g.avg / dashboardMax * 100)) : 0;
       const row = document.createElement('div');
       row.className = 'bar-row';
       row.innerHTML =
         '<div class="bar-row-head">' +
           '<span class="label">' + g.room + ' · ' + fmtTerm(g.term) +
             ' <span class="count">(ครบแล้ว ' + g.fullyEvaluated + '/' + g.studentCount + ' คน)</span></span>' +
-          '<span class="value">' + (g.avg !== null ? g.avg + '/10' : '-') + '</span>' +
+          '<span class="value">' + (g.avg !== null ? g.avg + '/' + dashboardMax : '-') + '</span>' +
         '</div>' +
         '<div class="bar-track"><div class="bar-fill" style="width:' + pct + '%"></div></div>';
       wrap.appendChild(row);
@@ -613,6 +622,19 @@
       applyFilterSort();
       renderTablePage();
     });
+  });
+
+  document.getElementById('assessmentSelect').addEventListener('change', function () {
+    requestVersion++;
+    currentPage = 1;
+    document.getElementById('statGrid').replaceChildren();
+    document.getElementById('roomChart').replaceChildren();
+    document.getElementById('criteriaChart').replaceChildren();
+    document.getElementById('evaluatorProgress').replaceChildren();
+    document.getElementById('studentTbody').replaceChildren();
+    allStudents = [];
+    applyFilterSort(); renderTablePage();
+    loadDashboard(false);
   });
 
   document.getElementById('refreshBtn').addEventListener('click', function () { loadDashboard(false); });

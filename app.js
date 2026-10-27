@@ -31,11 +31,21 @@ function drawCards() {
     const title = document.createElement('strong'); title.textContent = a.label;
     const points = document.createElement('span'); points.className = 'points'; points.textContent = a.max;
     const unit = document.createElement('small'); unit.textContent = 'คะแนน';
-    button.append(pill,title,points,unit);
-    button.addEventListener('click', () => { if (busy) return; if (Object.keys(scores).length && !confirm('มีคะแนนที่ยังไม่ได้บันทึก ต้องการเปลี่ยนหมวดหรือไม่?')) return; activeId = a.id; resetStudent(); $('message').hidden = true; drawCards(); drawSection(); });
+    const number = document.createElement('span'); number.className = 'tile-number'; number.textContent = String(assessments.indexOf(a) + 1).padStart(2,'0');
+    const footer = document.createElement('span'); footer.className = 'tile-footer'; footer.textContent = a.status === 'open' ? 'เริ่มประเมิน ↗' : a.status === 'completed' ? 'ดูรายละเอียด →' : 'ยังไม่เปิดรับคะแนน';
+    button.append(number,pill,title,points,unit,footer);
+    button.addEventListener('click', () => selectAssessment(a.id));
     $('assessmentCards').append(button);
   });
 }
+function selectAssessment(id) {
+  if (busy) return false;
+  if (id === activeId) return true;
+  if (Object.keys(scores).length && !confirm('มีคะแนนที่ยังไม่ได้บันทึก ต้องการเปลี่ยนหมวดหรือไม่?')) return false;
+  activeId = id; resetStudent(); $('message').hidden = true; drawCards(); drawSection();
+  return true;
+}
+$('startAssessment').addEventListener('click', event => { if (!selectAssessment('defense')) event.preventDefault(); });
 function drawSection() {
   const a = current(); $('sectionTitle').textContent = a.label + ' · ' + a.max + ' คะแนน';
   const open = configReady && a.status === 'open' && evaluator;
@@ -69,6 +79,7 @@ function renderRubric() {
 }
 function updateTotal() {
   const a = current(), criteria = a.criteria || [];
+  $('scoreProgress').value = Object.keys(scores).length;
   $('total').textContent = criteria.reduce((sum,c) => sum + (scores[c.key] || 0) / 4 * c.weight,0).toFixed(2);
   $('maximum').textContent = ' / ' + a.max + ' คะแนน';
   $('completion').textContent = 'ให้คะแนนแล้ว ' + Object.keys(scores).length + '/' + criteria.length + ' ข้อ';

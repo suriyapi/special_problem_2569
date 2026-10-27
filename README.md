@@ -16,7 +16,7 @@
 3. รัน **`setupDefenseSheets`** สร้างชีทใหม่และสูตรเฉลี่ย รันซ้ำได้โดยไม่ล้างคะแนนเดิม **ห้ามรัน `setupSheets` เพราะจะล้างชีทเดิม** และไม่ต้องรัน initializeStudents/initializeCommittees
 4. ตรวจ OAuth Web Client ใน Google Cloud Console ให้ Authorized JavaScript origins มี origin ที่โฮสต์จริง เช่น `https://suriyapi.github.io` (ไม่ใส่ path ของ repository) ค่า Client ID ใน `app.js`, `dashboard.html`, `Code.gs` ต้องตรงกัน
 5. Apps Script: Deploy → Manage deployments → Edit → New version → Deploy; Execute as Me และ Who has access Anyone ตัว API ตรวจ Google ID token และอีเมลก่อนอ่านข้อมูลนิสิต/เขียนคะแนน
-6. อัปโหลด `index.html`, `styles.css`, `app.js`, `dashboard.html` ไปที่โฟลเดอร์เดียวกันบน GitHub Pages หาก URL deployment เปลี่ยน ให้แก้ GAS_URL ใน app.js และ dashboard.html
+6. อัปโหลด `index.html`, `styles.css`, `app.js`, `dashboard.html`, `dashboard.css` ไปที่โฟลเดอร์เดียวกันบน GitHub Pages หาก URL deployment เปลี่ยน ให้แก้ GAS_URL ใน app.js และ dashboard.html
 7. ทดสอบด้วยบัญชีกรรมการจริง: เข้าใช้งาน → ค้นรหัสนิสิตที่ตรงห้อง → ให้คะแนน → ตรวจ DefenseScores และ DefenseSummary จากนั้นทดสอบอัปเดตคะแนนซ้ำและตรวจว่าคะแนน Scores เดิมยังอยู่
 
 ระบบยังไม่ได้ deploy จาก workspace นี้ การทดสอบบัญชี Google และสิทธิ์ Apps Script จริงต้องทำหลังติดตั้ง โดยหน้าให้คะแนนจะปิดการใช้งานหาก backend ยังเป็นรุ่นเก่า
@@ -55,3 +55,7 @@ PLO6 ในการสอบนี้พิจารณาหลักฐาน
 `node --test tests/scoring.test.cjs`
 
 เอกสาร HANDOFF.md และคู่มือติดตั้ง.md เดิมเป็นข้อมูลรุ่นหัวข้อโครงงาน ให้ใช้ README นี้สำหรับรุ่นสอบวิพากษ์
+
+## รูปแบบหน้าเว็บ
+
+หน้าให้คะแนนและแดชบอร์ดใช้พื้นขาว/เทาอ่อน ตัวอักษรระบบของอุปกรณ์ และสีน้ำเงินสำหรับการโต้ตอบ หมวดที่เลือกใช้พื้นเข้ม แถบสรุปคะแนนติดด้านล่างเมื่อเลื่อนประเมิน พร้อมแสดงจำนวนเกณฑ์ที่ให้คะแนนแล้ว รองรับคีย์บอร์ดและการตั้งค่าลดการเคลื่อนไหวของอุปกรณ์

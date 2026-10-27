@@ -2,36 +2,38 @@
 <html lang="th">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#174b3b"><title>ประเมินโครงงาน · 02739498</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css">
+<meta name="theme-color" content="#1d1d1f"><title>ประเมินโครงงาน · 02739498</title>
+
+<link rel="stylesheet" href="styles.css?v=20261028">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="app.js" defer></script>
+<script src="app.js?v=20261028" defer></script>
 </head>
 <body>
-<header><div class="header-inner"><div><span class="eyebrow">SPECIAL PROBLEM · 2569</span><h1>ระบบประเมินโครงงาน</h1><p>02739498 ปัญหาพิเศษ · สาขาวิชาเทคโนโลยีสารสนเทศและการสื่อสาร</p></div><a href="dashboard.html" class="header-link">แดชบอร์ดผู้ดูแล ↗</a></div></header>
+<nav class="global-nav" aria-label="เมนูหลัก"><div class="nav-inner"><a class="brand" href="index.html" aria-label="หน้าประเมินโครงงาน"><span class="brand-mark" aria-hidden="true">sp.</span><span>Special Problem</span></a><div class="nav-links"><a href="index.html" aria-current="page">ให้คะแนน</a><a href="dashboard.html">แดชบอร์ด <span aria-hidden="true">↗</span></a></div></div></nav>
+<header class="course-nav"><div class="header-inner"><span>ปัญหาพิเศษ <span class="course-code">02739498</span></span><span class="academic-year">ปีการศึกษา 2569</span></div></header>
 <main>
-<section class="overview"><div><span class="eyebrow">แผนการประเมินรายวิชา</span><h2>4 ส่วน รวม 100 คะแนน</h2><p>หัวข้อโครงงานเก็บแล้ว · ขณะนี้เปิดประเมินสอบวิพากษ์</p></div><div class="course-total"><strong>100</strong><span>คะแนนทั้งรายวิชา</span></div></section>
+<section class="overview" aria-labelledby="pageTitle"><span class="eyebrow">SPECIAL PROBLEM · ASSESSMENT</span><h1 id="pageTitle">ทุกมิติของโครงงาน.<br><span>ในมุมมองเดียว.</span></h1><p>4 ส่วนการประเมิน รวม 100 คะแนน<br>จากหัวข้อโครงงาน สู่การสอบวิพากษ์</p><a id="startAssessment" class="hero-link" href="#evaluation">เริ่มประเมินสอบวิพากษ์ <span aria-hidden="true">↓</span></a></section>
+<div class="plan-heading"><h2>เส้นทางการประเมิน</h2><span>ทั้งรายวิชา <strong>100</strong> คะแนน</span></div>
 <div id="assessmentCards" class="assessment-grid" aria-label="องค์ประกอบคะแนน"></div>
-<div class="workspace">
+<div class="workspace" id="evaluation">
 <aside>
-<section class="card" id="loginCard"><span class="step">01 · ยืนยันตัวตน</span><h2>เข้าสู่ระบบกรรมการ</h2><p>ใช้บัญชี Google ที่มีอีเมลตรงกับคอลัมน์ D ในชีท Committees</p><div id="googleButton"></div><p id="authStatus" role="status">กำลังเตรียมการเข้าสู่ระบบ…</p><button id="retryAuth" class="secondary" hidden>ลองใหม่</button></section>
+<section class="card" id="loginCard"><span class="step">01 · ยืนยันตัวตน</span><div class="account-icon" aria-hidden="true"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="8" r="3.5"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/></svg></div><h2>พร้อมให้คะแนนแล้ว?</h2><p>เข้าสู่ระบบด้วยบัญชี Google<br>ที่ลงทะเบียนเป็นกรรมการ</p><div id="googleButton"></div><p id="authStatus" role="status">กำลังเตรียมการเข้าสู่ระบบ…</p><button id="retryAuth" class="secondary" hidden>ลองใหม่</button></section>
 <section class="card" id="identityCard" hidden><span class="step">กรรมการผู้ประเมิน</span><h2 id="evaluatorName"></h2><p id="evaluatorEmail"></p><div id="assignments" class="assignment-list"></div><button id="logout" class="secondary">ออกจากระบบ / เปลี่ยนบัญชี</button></section>
-<section class="card note"><h3>หลักการให้คะแนน</h3><p>ประเมินรายบุคคลจากระบบที่สาธิต คำตอบ และหลักฐานการทำงาน แม้เป็นโครงงานกลุ่ม</p><p>คะแนนดิบ 0–4 × น้ำหนัก ÷ 4 แล้วเฉลี่ยคะแนนจากกรรมการแต่ละท่าน</p><p>การใช้ AI ไม่ทำให้ถูกหักคะแนนโดยตัวมันเอง ให้ดูการเปิดเผย การตรวจสอบ และการรักษาข้อมูล</p></section>
+<section class="card note"><span class="step">ก่อนเริ่มประเมิน</span><h3>ผลงานจริง.<br>หลักฐานชัดเจน.</h3><p>ประเมินรายบุคคลจากระบบที่สาธิต คำตอบ และหลักฐานการทำงาน แม้เป็นโครงงานกลุ่ม</p><p>ให้คะแนน 0–4 ในแต่ละเกณฑ์ ระบบคำนวณตามน้ำหนัก แล้วเฉลี่ยคะแนนจากกรรมการแต่ละท่าน</p><p>การใช้ AI ไม่ทำให้ถูกหักคะแนนโดยตัวมันเอง ให้ดูการเปิดเผย การตรวจสอบ และการรักษาข้อมูล</p></section>
 </aside>
 <section class="card assessment-panel">
-<div class="section-heading"><div><span class="step">02 · ประเมินผลงาน</span><h2 id="sectionTitle">สอบวิพากษ์</h2></div><span class="pill">CLO1–5</span></div>
+<div class="section-heading"><div><span class="step">การประเมินรายบุคคล</span><h2 id="sectionTitle">สอบวิพากษ์</h2></div><span class="pill">CLO1–5</span></div>
 <div id="sectionNotice" class="notice">กรุณาเข้าสู่ระบบก่อนค้นหานิสิตและให้คะแนน</div>
 <form id="scoreForm" hidden>
-<label for="studentId">รหัสนิสิต</label><div class="search-row"><input id="studentId" type="text" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" placeholder="รหัสนิสิต 10 หลัก" autocomplete="off" required><button id="lookup" type="button" class="secondary">ค้นหา</button></div>
+<label for="studentId">รหัสนิสิต</label><div class="search-row"><input id="studentId" type="text" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" placeholder="กรอกรหัสนิสิต 10 หลัก" autocomplete="off" required><button id="lookup" type="button" class="secondary">ค้นหา</button></div>
 <p id="lookupStatus" role="status"></p>
 <section id="studentCard" class="student-card" hidden><span class="step">ผู้รับการประเมิน</span><h3 id="studentName"></h3><p id="studentMeta"></p><p id="studentAdvisor"></p><p id="studentTopic" class="topic"></p></section>
 <div id="roomWarning" class="notice error" hidden>นิสิตไม่อยู่ในห้องสอบหรือแผนการเรียนที่ได้รับมอบหมาย จึงยังบันทึกคะแนนไม่ได้ กรุณาตรวจสอบรายชื่อกับผู้ดูแล</div>
-<div id="rubricArea" hidden><div class="rubric-intro"><h3>เกณฑ์ประเมิน</h3><span>0 ไม่ผ่าน · 1 ต้องปรับปรุง · 2 พอใช้ · 3 ดี · 4 ดีเยี่ยม</span></div><div id="criteria"></div><div class="score-footer"><div><span id="completion">ให้คะแนนแล้ว 0/5 ข้อ</span><div><strong id="total">0</strong><span id="maximum"> / 20 คะแนน</span></div></div><button id="save" type="submit" disabled>บันทึกคะแนนสอบวิพากษ์</button></div><p class="muted">บันทึกซ้ำสำหรับนิสิตและอีเมลกรรมการเดิม จะอัปเดตคะแนนเดิมในหมวดนี้</p></div>
+<div id="rubricArea" hidden><div class="rubric-intro"><h3>5 เกณฑ์. ครบทุกผลลัพธ์.</h3><span>0 ไม่ผ่าน · 1 ต้องปรับปรุง · 2 พอใช้ · 3 ดี · 4 ดีเยี่ยม</span></div><div id="criteria"></div><div class="score-footer"><progress id="scoreProgress" max="5" value="0" aria-label="จำนวนเกณฑ์ที่ให้คะแนนแล้ว"></progress><div><span id="completion">ให้คะแนนแล้ว 0/5 ข้อ</span><div><strong id="total">0</strong><span id="maximum"> / 20 คะแนน</span></div></div><button id="save" type="submit" disabled>บันทึกคะแนนสอบวิพากษ์</button></div><p class="muted">บันทึกซ้ำสำหรับนิสิตและอีเมลกรรมการเดิม จะอัปเดตคะแนนเดิมในหมวดนี้</p></div>
 </form>
 <div id="message" role="status" tabindex="-1" hidden></div>
 </section>
 </div>
-<footer>รายวิชา 02739498 · คะแนนแต่ละส่วนจัดเก็บแยกกัน · ส่วนที่วางแผนไว้ยังไม่เปิดรับคะแนน</footer>
+<footer><a class="footer-brand" href="index.html">Special Problem.</a><span>02739498 ปัญหาพิเศษ · ปีการศึกษา 2569</span><span>สาขาวิชาเทคโนโลยีสารสนเทศและการสื่อสาร</span></footer>
 </main>
 </body></html>

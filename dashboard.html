@@ -3,193 +3,24 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#2f7d32">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8C%BF%3C/text%3E%3C/svg%3E">
+<meta name="theme-color" content="#1d1d1f">
+
 <title>แดชบอร์ดสรุปผล - ปัญหาพิเศษ</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+
+
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<style>
-  :root {
-    --ku-green-900: #123319;
-    --ku-green-800: #1c4d24;
-    --ku-green-700: #2f7d32;
-    --ku-green-600: #3f9142;
-    --ku-green-500: #4c9a2a;
-    --ku-green-100: #e6f4e1;
-    --ku-green-50: #f3f9f0;
-    --ku-gold-600: #b8860b;
-    --ku-gold-100: #faf3d9;
-    --ink-900: #16231a;
-    --ink-600: #4c5c50;
-    --ink-400: #7c8c80;
-    --border: #dbe6d8;
-    --bg: #f2f6f1;
-    --card: #ffffff;
-    --danger: #c0392b;
-    --danger-bg: #fdecea;
-    --warn: #8a6d1a;
-    --warn-bg: #fff3cd;
-    --warn-border: #f0dfa0;
-    --radius-lg: 18px;
-    --radius-md: 12px;
-    --radius-sm: 9px;
-    --shadow-card: 0 2px 10px rgba(18,51,25,0.08), 0 1px 3px rgba(18,51,25,0.06);
-  }
-  * { box-sizing: border-box; }
-  body {
-    font-family: 'Sarabun', 'Angsana New', sans-serif;
-    background: var(--bg); margin: 0; padding: 0; color: var(--ink-900);
-  }
-  .topbar {
-    background: linear-gradient(135deg, var(--ku-green-800), var(--ku-green-600));
-    color: #fff; padding: 20px 16px; margin-bottom: 20px;
-    box-shadow: 0 2px 8px rgba(18,51,25,0.18);
-  }
-  .topbar-inner { max-width: 720px; margin: 0 auto; display: flex; align-items: center; gap: 12px; }
-  .topbar-icon {
-    font-size: 24px; line-height: 1; flex-shrink: 0; background: rgba(255,255,255,0.15);
-    border-radius: 50%; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center;
-  }
-  .topbar-title { font-size: 16.5px; font-weight: 700; }
-  .topbar-sub { font-size: 12px; opacity: 0.9; margin-top: 2px; }
-
-  .page { max-width: 720px; margin: 0 auto; padding: 0 16px 40px; }
-  .nav-bar { max-width: 480px; margin: 0 auto 16px; display: flex; gap: 8px; }
-  .nav-link {
-    flex: 1; text-align: center; padding: 10px; border-radius: var(--radius-sm);
-    font-weight: 700; font-size: 13.5px; text-decoration: none;
-    border: 1.5px solid var(--ku-green-100); color: var(--ku-green-800); background: #fff;
-  }
-  .nav-link.active {
-    background: linear-gradient(135deg, var(--ku-green-700), var(--ku-green-600));
-    color: #fff; border-color: transparent;
-  }
-
-  .state-msg {
-    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-md);
-    padding: 24px; text-align: center; color: var(--ink-600); font-size: 14px;
-  }
-  .state-msg.err { color: var(--danger); background: var(--danger-bg); border-color: #f3c8c2; }
-  .gate-title { font-size: 15px; font-weight: 700; color: var(--ink-900); margin-bottom: 6px; }
-  .gate-sub { font-size: 13px; color: var(--ink-400); margin-bottom: 16px; }
-  .gsi-btn-wrap { display: flex; justify-content: center; }
-
-  .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
-  .updated-label { font-size: 12px; color: var(--ink-400); }
-  .refresh-btn {
-    background: var(--card); border: 1.5px solid var(--ku-green-500); color: var(--ku-green-700);
-    font-weight: 700; font-size: 13px; padding: 7px 14px; border-radius: 20px; cursor: pointer;
-  }
-  .refresh-btn:active { transform: scale(0.97); }
-
-  .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 18px; }
-  .stat-tile {
-    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-md);
-    padding: 14px 16px; box-shadow: var(--shadow-card);
-  }
-  .stat-tile .label { font-size: 12.5px; color: var(--ink-400); font-weight: 600; }
-  .stat-tile .value { font-size: 26px; font-weight: 700; color: var(--ink-900); margin-top: 2px; }
-  .stat-tile.full .value { color: var(--ku-green-700); }
-  .stat-tile.partial .value { color: var(--ku-gold-600); }
-  .stat-tile.avg .value { color: var(--ku-green-800); }
-
-  .card {
-    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg);
-    padding: 18px; margin-bottom: 16px; box-shadow: var(--shadow-card);
-  }
-  .card h2 { font-size: 15px; margin: 0 0 14px; color: var(--ku-green-800); font-weight: 700; }
-
-  .bar-row { margin-bottom: 14px; }
-  .bar-row:last-child { margin-bottom: 0; }
-  .bar-row-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; margin-bottom: 5px; gap: 8px; }
-  .bar-row-head .label { font-weight: 600; color: var(--ink-900); }
-  .bar-row-head .count { font-size: 11.5px; color: var(--ink-400); font-weight: 500; }
-  .bar-row-head .value { font-weight: 700; color: var(--ku-green-800); flex-shrink: 0; }
-  .bar-track { height: 11px; background: var(--ku-green-100); border-radius: 20px; overflow: hidden; }
-  .bar-fill { height: 100%; background: linear-gradient(90deg, var(--ku-green-500), var(--ku-green-700)); border-radius: 20px; transition: width .3s ease; }
-  .bar-fill.status-partial { background: linear-gradient(90deg, #f0a339, #d97706); }
-  .bar-fill.status-none { background: #d8ddd7; }
-  .bar-row-head .badge { flex-shrink: 0; }
-  .eval-toggle { font-size: 12px; color: var(--ku-green-700); font-weight: 700; cursor: pointer; margin-top: 8px; user-select: none; }
-  .eval-toggle:hover { text-decoration: underline; }
-  .eval-detail { display: none; margin-top: 4px; }
-  .eval-detail.show { display: block; }
-  .eval-detail-section { margin-top: 8px; }
-  .eval-detail-title { font-size: 12px; font-weight: 700; margin-bottom: 6px; }
-  .eval-detail-title.done { color: var(--ku-green-700); }
-  .eval-detail-title.pending { color: var(--warn); }
-  .eval-chip-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
-  .eval-chip { font-size: 11.5px; padding: 3px 9px; border-radius: 20px; white-space: nowrap; }
-  .eval-chip.done { background: var(--ku-green-50); color: var(--ku-green-800); }
-  .eval-chip.pending { background: var(--warn-bg); color: var(--warn); }
-  .eval-empty { font-size: 12px; color: var(--ink-400); font-style: italic; }
-
-  .search-input {
-    width: 100%; padding: 11px 14px; font-size: 15px; border-radius: var(--radius-sm);
-    border: 1.5px solid var(--border); font-family: inherit; margin-bottom: 14px;
-  }
-  .search-input:focus { outline: none; border-color: var(--ku-green-500); box-shadow: 0 0 0 3px var(--ku-green-100); }
-
-  .table-wrap { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
-  th:nth-child(1), td:nth-child(1) { width: 46%; }
-  th:nth-child(2), td:nth-child(2) { width: 22%; }
-  th:nth-child(3), td:nth-child(3) { width: 17%; }
-  th:nth-child(4), td:nth-child(4) { width: 15%; }
-  th { text-align: left; font-size: 11.5px; color: var(--ink-400); font-weight: 700; padding: 0 8px 8px; border-bottom: 1.5px solid var(--border); white-space: nowrap; }
-  td { padding: 10px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
-  tr:last-child td { border-bottom: none; }
-  .stu-name { font-weight: 700; color: var(--ink-900); }
-  .stu-topic { font-size: 11.5px; color: var(--ink-400); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .stu-room { font-weight: 600; }
-  .stu-term { font-size: 11.5px; color: var(--ink-400); }
-  .badge { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
-  .badge-full { background: var(--ku-green-100); color: var(--ku-green-800); }
-  .badge-partial { background: var(--ku-gold-100); color: #6b5310; }
-  .badge-none { background: #eef1ee; color: #5c6b62; }
-  .avg-cell { font-weight: 700; color: var(--ku-green-800); }
-  .avg-cell.empty { color: var(--ink-400); font-weight: 500; }
-  .no-results { text-align: center; color: var(--ink-400); padding: 20px; font-size: 13px; }
-  .dup-warning {
-    background: var(--warn-bg); color: var(--warn); border: 1px solid var(--warn-border);
-    border-radius: var(--radius-md); padding: 12px 16px; margin-bottom: 14px; font-size: 13px;
-  }
-  th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
-  th.sortable:hover { color: var(--ku-green-700); }
-  .sort-arrow { display: inline-block; width: 10px; font-size: 10px; color: var(--ku-green-600); }
-  .pagination {
-    display: flex; align-items: center; justify-content: center; gap: 14px;
-    margin-top: 16px; font-size: 13px; color: var(--ink-600);
-  }
-  .page-btn {
-    background: var(--card); border: 1.5px solid var(--border); color: var(--ku-green-700);
-    font-weight: 700; font-size: 13px; padding: 6px 14px; border-radius: 20px; cursor: pointer;
-  }
-  .page-btn:disabled { color: var(--ink-400); border-color: var(--border); cursor: default; opacity: .5; }
-</style>
+<link rel="stylesheet" href="styles.css?v=20261028">
+<link rel="stylesheet" href="dashboard.css?v=20261028">
 </head>
 <body>
 
-  <header class="topbar">
-    <div class="topbar-inner">
-      <span class="topbar-icon">📊</span>
-      <div>
-        <div class="topbar-title">แดชบอร์ดสรุปผลการประเมิน</div>
-        <div class="topbar-sub">คะแนนโครงงานแยกตามหมวด · ปีการศึกษา 2569</div>
-      </div>
-    </div>
-  </header>
-
+  <nav class="global-nav" aria-label="เมนูหลัก"><div class="nav-inner"><a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">sp.</span><span>Special Problem</span></a><div class="nav-links"><a href="index.html">ให้คะแนน</a><a href="dashboard.html" aria-current="page">แดชบอร์ด</a></div></div></nav>
+  <header class="course-nav"><div class="header-inner"><span>ปัญหาพิเศษ <span class="course-code">02739498</span></span><span class="academic-year">ปีการศึกษา 2569</span></div></header>
   <main class="page">
-    <nav class="nav-bar">
-      <a class="nav-link" href="index.html">📝 ให้คะแนน</a>
-      <a class="nav-link active" href="dashboard.html">📊 แดชบอร์ด</a>
-    </nav>
-
+    <section class="overview dashboard-hero"><span class="eyebrow">SPECIAL PROBLEM · OVERVIEW</span><h1>ทุกความคืบหน้า.<br><span>เห็นภาพชัดเจน.</span></h1><p>ติดตามผลการประเมิน คะแนน และความพร้อมของนิสิต<br>แยกตามส่วนการประเมินในรายวิชา</p></section>
     <div class="state-msg" id="loginGate">
-      <div class="gate-title">🔒 หน้านี้จำกัดสิทธิ์เฉพาะผู้ดูแลระบบ</div>
+      <div class="gate-eyebrow">สำหรับผู้ดูแลระบบ</div><h2 class="gate-title">ภาพรวมที่พร้อมให้คุณดูแล.</h2>
       <div class="gate-sub">กรุณาเข้าสู่ระบบด้วยบัญชี Google ที่ได้รับอนุญาต</div>
       <div id="gsiButton" class="gsi-btn-wrap"></div>
     </div>
@@ -200,7 +31,7 @@
 
     <div id="dashboardContent" style="display:none;">
       <label for="assessmentSelect">หมวดคะแนน</label>
-      <select id="assessmentSelect" style="padding:12px;width:100%;margin-bottom:16px;font:inherit;border:1px solid #dbe6d8;border-radius:9px"><option value="defense">สอบวิพากษ์ · 20 คะแนน</option><option value="proposal">หัวข้อโครงงาน · 10 คะแนน</option><option disabled>อาจารย์ที่ปรึกษา · 50 คะแนน · ยังไม่เปิด</option><option disabled>รายงานความก้าวหน้า · 20 คะแนน · ยังไม่เปิด</option></select>
+      <select id="assessmentSelect"><option value="defense">สอบวิพากษ์ · 20 คะแนน</option><option value="proposal">หัวข้อโครงงาน · 10 คะแนน</option><option disabled>อาจารย์ที่ปรึกษา · 50 คะแนน · ยังไม่เปิด</option><option disabled>รายงานความก้าวหน้า · 20 คะแนน · ยังไม่เปิด</option></select>
       <div class="toolbar">
         <span class="updated-label" id="updatedLabel"></span>
         <button class="refresh-btn" id="refreshBtn">↻ รีเฟรช</button>
@@ -209,6 +40,7 @@
       <div class="dup-warning" id="dupWarning" style="display:none;"></div>
 
       <div class="stat-grid" id="statGrid"></div>
+      <div class="dashboard-grid">
 
       <div class="card">
         <h2>คะแนนเฉลี่ยแยกตามห้องสอบ/แผนการเรียน</h2>
@@ -244,7 +76,9 @@
         </div>
         <div class="pagination" id="pagination"></div>
       </div>
+      </div>
     </div>
+    <footer><a class="footer-brand" href="index.html">Special Problem.</a><span>02739498 ปัญหาพิเศษ · ปีการศึกษา 2569</span><span>สาขาวิชาเทคโนโลยีสารสนเทศและการสื่อสาร</span></footer>
   </main>
 
 <script>
@@ -479,20 +313,23 @@
       track.innerHTML = '<div class="bar-fill' + fillCls + '" style="width:' + pct + '%"></div>';
       row.appendChild(track);
 
-      const toggle = document.createElement('div');
+      const toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.setAttribute('aria-expanded', 'false');
       toggle.className = 'eval-toggle';
-      toggle.textContent = 'ดูรายชื่อ ▾';
+      toggle.textContent = 'ดูรายชื่อ ↓';
       row.appendChild(toggle);
 
       const detail = document.createElement('div');
       detail.className = 'eval-detail';
-      detail.appendChild(buildEvalSection('✅ ประเมินแล้ว', ev.doneStudents || [], 'done'));
-      detail.appendChild(buildEvalSection('⏳ ยังไม่ได้ประเมิน', ev.pendingStudents || [], 'pending'));
+      detail.appendChild(buildEvalSection('ประเมินแล้ว', ev.doneStudents || [], 'done'));
+      detail.appendChild(buildEvalSection('ยังไม่ได้ประเมิน', ev.pendingStudents || [], 'pending'));
       row.appendChild(detail);
 
       toggle.addEventListener('click', function () {
         const showing = detail.classList.toggle('show');
-        toggle.textContent = showing ? 'ซ่อนรายชื่อ ▲' : 'ดูรายชื่อ ▾';
+        toggle.textContent = showing ? 'ซ่อนรายชื่อ ↑' : 'ดูรายชื่อ ↓';
+        toggle.setAttribute('aria-expanded', String(showing));
       });
 
       wrap.appendChild(row);

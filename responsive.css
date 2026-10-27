@@ -251,3 +251,33 @@ input, select, textarea, .select-trigger { font-size: 14px; }
 .review-group-title{display:block;line-height:1.9}.review-group-title strong{display:block}.review-group-title strong:last-child{margin-top:4px}
 .guide-question>summary{font-size:12px;gap:12px}.guide-question .question-weight{font-size:10px}
 }
+.auth-progress{display:flex;gap:10px;align-items:center;padding:14px 0 0;color:#047857;font-size:12px}
+.auth-progress .spinner{width:18px;height:18px;border-width:2px;flex-shrink:0}
+.chart-tooltip{position:fixed;z-index:120;max-width:min(260px,calc(100vw - 24px));background:#0f172a;color:white;white-space:pre-line;font-family:var(--body);font-size:12px;line-height:1.8;border-radius:8px;padding:10px 14px;box-shadow:0 4px 14px #0f172a20;pointer-events:none}
+#workspaceError .button-row{margin-top:20px}
+.chart-filterbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:-8px 0 20px;padding:4px 0}
+.chart-filterbar>p{font-size:12px;color:#64748b}.chart-filterbar>div{display:flex;align-items:center;gap:14px}
+.chart-text-button{border:0;background:transparent;font:inherit;cursor:pointer}
+.distribution-link.chart-text-button{font-size:12px;font-weight:600;color:#047857;width:100%;text-align:center}
+.interactive-column{position:relative;border:0;border-radius:8px;padding:0;background:transparent;color:inherit;font-family:var(--body);cursor:pointer}
+.interactive-column:hover{background:#f8fbfd}.interactive-column[aria-pressed="true"]{background:#ecfdf5}
+.interactive-column[aria-pressed="true"] .column-bar{outline:2px solid #059669;outline-offset:3px}
+.interactive-column:focus-visible{outline:3px solid #0ea5e9;outline-offset:3px}
+.chart-updating .column-bar{animation:none}
+.interactive-sector{cursor:pointer;transition:opacity 180ms,stroke-width 180ms;pointer-events:visibleStroke}
+.interactive-sector:hover,.interactive-sector:focus{stroke-width:25}.interactive-sector:focus-visible{outline:none;filter:drop-shadow(0 0 2px #0ea5e9)}
+.completion-legend>.legend-filter{display:grid;grid-template-columns:1fr auto auto;width:100%;align-items:center;gap:12px;padding:8px 10px;margin:-4px -10px;border:1px solid transparent;border-radius:8px;background:transparent;color:#475569;font-family:var(--body);font-size:12px;text-align:left;cursor:pointer}
+.completion-legend>.legend-filter>span{display:flex;align-items:center;gap:8px}.completion-legend>.legend-filter>strong{font-size:13px;font-weight:600}.completion-legend>.legend-filter>small{font-size:10px;color:#64748b}
+.completion-legend>.legend-filter:hover{background:#f8fafc}.completion-legend>.legend-filter[aria-pressed="true"]{background:#ecfdf5;border-color:#a7f3d0}
+.completion-legend>.legend-filter:disabled{cursor:default;opacity:.5}
+.activity-more.chart-text-button{width:100%;font-size:11px;color:#64748b}
+@media(max-width:600px){.chart-filterbar{align-items:flex-start;flex-direction:column;gap:10px}.chart-filterbar>div{width:100%;justify-content:space-between}.chart-filterbar>p{font-size:11px}.chart-filterbar .btn{font-size:11px}.completion-legend>.legend-filter{padding-top:12px;padding-bottom:12px}}
+.admin-interactive-bar{display:block;width:100%;background:transparent;border:1px solid transparent;border-radius:8px;padding:10px;text-align:left;color:inherit;font-family:var(--body);cursor:pointer}
+.admin-interactive-bar .bar-row-head{display:flex}.admin-interactive-bar .bar-track,.admin-interactive-bar .bar-fill{display:block}
+.admin-interactive-bar:hover,.admin-interactive-bar[aria-expanded="true"]{background:#f0fdf8;border-color:#d1fae5}
+.evaluator-track{display:block;width:100%;border:0;padding:0;cursor:pointer;min-height:12px}.evaluator-track .bar-fill{display:block}
+.chart-detail-panel{padding:16px;border:1px solid #a7f3d0;background:#f0fdf8;border-radius:8px;margin-top:16px;font-size:13px;line-height:1.8}
+.chart-detail-panel p{font-size:12px;margin:8px 0;color:#475569}
+.chart-text-button{font-size:12px;font-weight:600;line-height:1.7}
+.chart-hint{font-size:11px;color:#64748b;line-height:1.8;margin:0 0 18px}
+.dashboard-grid>.card>h2:has(+.chart-hint){margin-bottom:8px}

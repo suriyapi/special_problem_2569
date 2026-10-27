@@ -6,7 +6,9 @@
     "test": "node --test tests/scoring.test.cjs",
     "test:ui": "node tests/ui.browser.cjs && node tests/dashboard.browser.cjs",
     "test:ui:touch": "node tests/ui.browser.cjs --touch",
-    "test:questions": "node tests/questions.browser.cjs"
+    "test:questions": "node tests/questions.browser.cjs",
+    "test:safari": "node tests/safari-login.browser.cjs",
+    "test:charts": "node tests/charts.browser.cjs && node tests/charts.browser.cjs --webkit"
   },
   "devDependencies": {
     "playwright": "1.64.1"

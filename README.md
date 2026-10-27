@@ -16,7 +16,7 @@
 3. รัน **`setupDefenseSheets`** สร้างชีทใหม่และสูตรเฉลี่ย รันซ้ำได้โดยไม่ล้างคะแนนเดิม **ห้ามรัน `setupSheets` เพราะจะล้างชีทเดิม** และไม่ต้องรัน initializeStudents/initializeCommittees
 4. ตรวจ OAuth Web Client ใน Google Cloud Console ให้ Authorized JavaScript origins มี origin ที่โฮสต์จริง เช่น `https://suriyapi.github.io` (ไม่ใส่ path ของ repository) ค่า Client ID ใน `app.js`, `dashboard.html`, `Code.gs` ต้องตรงกัน
 5. Apps Script: Deploy → Manage deployments → Edit → New version → Deploy; Execute as Me และ Who has access Anyone ตัว API ตรวจ Google ID token และอีเมลก่อนอ่านข้อมูลนิสิต/เขียนคะแนน
-6. อัปโหลด `index.html`, `styles.css`, `app.js`, `dashboard.html`, `dashboard.css`, `reference.css`, `responsive.css`, `ui.js`, `icons.svg` ไปที่โฟลเดอร์เดียวกันบน GitHub Pages หาก URL deployment เปลี่ยน ให้แก้ GAS_URL ใน app.js และ dashboard.html
+6. อัปโหลด `index.html`, `styles.css`, `app.js`, `dashboard.html`, `dashboard.css`, `reference.css`, `responsive.css`, `boot.js`, `ui.js`, `icons.svg` ไปที่โฟลเดอร์เดียวกันบน GitHub Pages หาก URL deployment เปลี่ยน ให้แก้ GAS_URL ใน app.js และ dashboard.html
 7. ทดสอบด้วยบัญชีกรรมการจริง: เข้าใช้งาน → ค้นรหัสนิสิตที่ตรงห้อง → ให้คะแนน → ตรวจ DefenseScores และ DefenseSummary จากนั้นทดสอบอัปเดตคะแนนซ้ำและตรวจว่าคะแนน Scores เดิมยังอยู่
 
 ระบบยังไม่ได้ deploy จาก workspace นี้ การทดสอบบัญชี Google และสิทธิ์ Apps Script จริงต้องทำหลังติดตั้ง โดยหน้าให้คะแนนจะปิดการใช้งานหาก backend ยังเป็นรุ่นเก่า
@@ -115,3 +115,17 @@ API `getMyWorkspace` ตรวจบัญชี Google ฝั่งเซิร
 - คอลัมน์ G:K เป็นคะแนนดิบเทียบเท่ารายด้าน 0–4 ซึ่งอาจมีทศนิยม ส่วน L ยังคงเป็นคะแนนรวมเต็ม 20 และ M เป็นอีเมล สูตร Summary และแดชบอร์ดจึงอ่านคะแนนรวมตำแหน่งเดิมได้
 - ดาวน์โหลด CSV จะแสดงคะแนนย่อยและเวอร์ชันด้วย รายการเก่าที่ไม่มีรายละเอียดจะเว้นช่องคะแนนย่อยว่าง
 - ทดสอบการคำนวณด้วย `npm test` และขั้นตอนประเมิน 15 ข้อด้วย `npm run test:questions`
+
+## การเข้าสู่ระบบบน Safari และกราฟโต้ตอบ
+
+หลังยืนยันบัญชี ระบบแสดงสถานะกำลังโหลดและเลื่อนไปด้านบน หากเครือข่ายล้มเหลวหรือเกิน 25 วินาทีจะแสดงปุ่มลองใหม่ หากส่วนประกอบ JavaScript โหลดไม่ครบจะแสดงหน้ากู้คืนและปุ่มโหลดหน้าใหม่ การกลับจาก bfcache จะปลดสถานะเมนู/พื้นหลังที่ค้างอยู่ มี fallback สำหรับ replaceChildren และ MediaQueryList รุ่นเก่า และไม่ใช้ค่า scroll behavior แบบ instant
+
+กราฟห้องและวงกลมในหน้ากรรมการเลือกตัวกรองร่วมกันได้ ตารางด้านล่างจะเปลี่ยนตามห้อง/สถานะที่เลือก ปุ่มเปิดรายชื่อจะส่งตัวกรองไปหน้ารายชื่อนิสิต พร้อมปุ่มล้างตัวกรอง Tooltip รองรับเมาส์และคีย์บอร์ด ส่วนบนมือถือใช้การแตะและแสดงสถานะการเลือกในหน้า
+
+แดชบอร์ดผู้ดูแลแตะกราฟห้องเพื่อกรองรายชื่อ แตะกราฟรายเกณฑ์เพื่อดูคะแนนเทียบตามน้ำหนัก และแตะแถบกรรมการเพื่อเปิดรายชื่อที่ประเมินแล้ว/ยังค้าง
+
+- `npx playwright install webkit` เตรียม WebKit สำหรับการทดสอบ
+- `npm run test:safari` ทดสอบหน้าล็อกอินด้วย WebKit จำลอง iPhone รวมความล้มเหลวของเครือข่าย/timeout/สคริปต์ และการกู้คืนหน้าจอ
+- `npm run test:charts` ทดสอบกราฟบน Chrome และ WebKit แบบสัมผัส
+
+OAuth และข้อมูลส่วนตัวในการทดสอบใช้ข้อมูลจำลอง การทดสอบ WebKit ไม่ใช่การตรวจบน iPhone ของผู้ใช้โดยตรง

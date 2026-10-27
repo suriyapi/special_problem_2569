@@ -6,6 +6,7 @@ const $ = id => document.getElementById(id);
 const SCALE = ['ไม่ผ่าน','ต้องปรับปรุง','พอใช้','ดี','ดีเยี่ยม'];
 let assessments = [], evaluator = null, token = null, students = [], records = [];
 let selectedStudent = null, scores = {}, originalScores = {}, busy = false, loading = false, loaded = false;
+let chartRoomKey='',chartStatus='all';
 let studentFilter = 'all', authVersion = 0, workspaceVersion = 0, activeView = 'overview';
 const defense = () => assessments.find(a => a.id === 'defense');
 const defenseQuestions = () => defense().criteria.flatMap(c => c.questions || []);
@@ -21,16 +22,24 @@ function dateLabel(value) { const date = new Date(value); return Number.isNaN(da
 function displayMessage(text, error = false) { $('globalMessage').textContent = text; $('globalMessage').className = 'alert ' + (error ? 'error' : 'success'); $('globalMessage').hidden = false; }
 function storageSet(value) { try { if (value) sessionStorage.setItem(TOKEN_KEY,value); else sessionStorage.removeItem(TOKEN_KEY); } catch {} }
 function storageGet() { try { return sessionStorage.getItem(TOKEN_KEY); } catch { return null; } }
-async function api(action, params = {}) {
-  const url = new URL(GAS_URL); url.searchParams.set('action',action);
-  Object.entries(params).forEach(([key,value]) => url.searchParams.set(key,value));
-  const response = await fetch(url);
-  if (!response.ok) throw new Error('เชื่อมต่อระบบไม่สำเร็จ กรุณาลองอีกครั้ง');
-  const result = await response.json();
-  if (result.status === 'error') throw new Error(result.message || 'โหลดข้อมูลไม่สำเร็จ');
-  return result;
+const REQUEST_TIMEOUT_MS = 25000;
+function replaceViewUrl(view){try{history.replaceState(null,'','#'+view);}catch{}}
+function scrollTopNow(){if(window.SPRecovery)window.SPRecovery.scrollTop();else window.scrollTo(0,0);}
+function setMobileMenu(open){if(window.SPUI?.setMenu)window.SPUI.setMenu(open);else if(!open)window.SPRecovery?.resetLayout();}
+async function api(action,params={}){
+  const url=new URL(GAS_URL);url.searchParams.set('action',action);url.searchParams.set('_ts',String(Date.now()));
+  Object.entries(params).forEach(([key,value])=>url.searchParams.set(key,value));
+  const controller=typeof AbortController==='function'?new AbortController():null;let timer;
+  const timeout=new Promise((resolve,reject)=>{timer=setTimeout(()=>{reject(new Error('การเชื่อมต่อใช้เวลานาน กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองอีกครั้ง'));controller?.abort();},REQUEST_TIMEOUT_MS);});
+  try{
+    return await Promise.race([(async()=>{
+      const response=await fetch(url,controller?{signal:controller.signal}:{});
+      if(!response.ok)throw new Error('เชื่อมต่อระบบไม่สำเร็จ กรุณาลองอีกครั้ง');
+      let result;try{result=await response.json();}catch{throw new Error('โหลดข้อมูลไม่สมบูรณ์ กรุณาลองอีกครั้ง');}
+      if(result.status==='error')throw new Error(result.message||'โหลดข้อมูลไม่สำเร็จ');return result;
+    })(),timeout]);
+  }finally{clearTimeout(timer);}
 }
-function setMobileMenu(open) { window.SPUI.setMenu(open); }
 function allowLeave() { return !busy && (!dirty() || confirm('มีคะแนนที่ยังไม่ได้บันทึก ต้องการออกจากหน้านี้และยกเลิกการแก้ไขหรือไม่?')); }
 function navigate(view, options = {}) {
   if (!['overview','students','grade','history','guide'].includes(view)) view = 'overview';
@@ -40,14 +49,14 @@ function navigate(view, options = {}) {
     scores = {}; originalScores = {}; selectedStudent = null;
   }
   activeView = view;
-  history.replaceState(null,'','#'+view);
+  replaceViewUrl(view);
   setMobileMenu(false);
   document.querySelectorAll('.view').forEach(node => { node.hidden = node.id !== 'view-'+view || !loaded; });
   document.querySelectorAll('[data-route]').forEach(link => { const selected = link.dataset.route === view || view === 'grade' && link.dataset.route === 'students'; if (selected) link.setAttribute('aria-current','page'); else link.removeAttribute('aria-current'); });
   const titles = {overview:'ภาพรวมงานของฉัน',students:'รายชื่อนิสิต',grade:'ให้คะแนนสอบวิพากษ์',history:'ประวัติการประเมิน',guide:'คู่มือและเกณฑ์'};
   document.title = titles[view]+' · ปัญหาพิเศษ';
   if (loaded) renderCurrentView();
-  if (!options.keepScroll) window.scrollTo({top:0,behavior:'instant'});
+  if (!options.keepScroll) scrollTopNow();
   return true;
 }
 document.addEventListener('click', event => {
@@ -55,9 +64,11 @@ document.addEventListener('click', event => {
   if (!link || link.getAttribute('href') === '#mainContent') return;
   event.preventDefault(); navigate(link.getAttribute('href').slice(1));
 });
-window.addEventListener('hashchange', () => { const desired = location.hash.slice(1); if (!navigate(desired)) history.replaceState(null,'','#'+activeView); });
+window.addEventListener('hashchange', () => { const desired = location.hash.slice(1); if (!navigate(desired)) replaceViewUrl(activeView); });
 async function login(credential) {
-  const version = ++authVersion;
+  if(busy)return;
+  const version = ++authVersion;workspaceVersion++;loading=false;loaded=false;
+  $('authProgress').hidden=false;
   $('authStatus').textContent = 'กำลังตรวจสอบบัญชีกรรมการ…';
   try {
     const identity = await api('getMyEvaluatorInfo',{idToken:credential});
@@ -67,21 +78,30 @@ async function login(credential) {
     $('evaluatorName').textContent = identity.name; $('evaluatorEmail').textContent = identity.email;
     $('userAvatar').textContent = identity.name.replace(/^อาจารย์(?:ดร\.)?/,'').trim().slice(0,1) || 'ก';
     $('topAvatar').textContent = $('userAvatar').textContent;
+    window.SPRecovery?.resetLayout();
     $('loginScreen').hidden = true; $('appShell').hidden = false;
+    scrollTopNow();
     activeView = location.hash.slice(1) || 'overview';
     await loadWorkspace();
-  } catch(error) { if (version === authVersion) { storageSet(null); $('authStatus').textContent = error.message; } }
+  } catch(error) {
+    if(version===authVersion){storageSet(null);token=null;evaluator=null;loaded=false;
+      window.SPRecovery?.resetLayout();$('appShell').hidden=true;$('loginScreen').hidden=false;
+      $('authStatus').textContent=error.message||'เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่';
+      $('googleButton').scrollIntoView({block:'center',behavior:'auto'});
+    }
+  } finally { if(version===authVersion)$('authProgress').hidden=true; }
 }
 function logout(expired = false) {
   if (!expired && !allowLeave()) return;
   setMobileMenu(false);
   authVersion++; workspaceVersion++; evaluator = null; token = null; loaded = false; loading = false;
-  students = []; records = []; scores = {}; originalScores = {}; selectedStudent = null; storageSet(null);
+  students = []; records = []; scores = {}; originalScores = {}; selectedStudent = null; chartRoomKey='';chartStatus='all';storageSet(null);
   $('appShell').hidden = true; $('loginScreen').hidden = false;
+  $('authProgress').hidden=true;
   $('authStatus').textContent = expired ? 'การเข้าสู่ระบบหมดอายุ กรุณาเข้าสู่ระบบใหม่' : 'เลือกบัญชี Google เพื่อเข้าสู่ระบบ';
   if ($('reviewDialog').open) $('reviewDialog').close();
   if (window.google?.accounts?.id) google.accounts.id.disableAutoSelect();
-  history.replaceState(null,'','#overview');
+  replaceViewUrl('overview');
 }
 $('logout').addEventListener('click', () => logout());
 async function loadWorkspace() {
@@ -97,10 +117,14 @@ async function loadWorkspace() {
     assessments = config.assessments; students = data.students; records = data.records;
     if (!defense()?.rubricVersion || defenseQuestions().length !== 15) throw new Error('เกณฑ์สอบวิพากษ์ปรับเป็น 15 ข้อย่อย กรุณารีเฟรชหรือติดต่อผู้ดูแล');
     loaded = true; populateRooms(); renderAll(); navigate(activeView,{force:true});
-  } catch(error) { if (version === workspaceVersion) { $('workspaceErrorText').textContent = error.message; $('workspaceError').hidden = false; } }
+  } catch(error) {
+    if(version===workspaceVersion){loaded=false;document.querySelectorAll('.view').forEach(node=>{node.hidden=true;});
+      window.SPRecovery?.resetLayout();$('workspaceErrorText').textContent=error.message||'โหลดข้อมูลไม่สำเร็จ กรุณาลองใหม่';$('workspaceError').hidden=false;scrollTopNow();}
+  }
   finally { if (version === workspaceVersion) { loading = false; $('workspaceLoading').hidden = true; } }
 }
 $('retryWorkspace').addEventListener('click',loadWorkspace);
+$('workspaceSignOut').addEventListener('click',()=>logout());
 $('refreshWorkspace').addEventListener('click',loadWorkspace);
 function renderAll() { renderOverview(); renderStudents(); renderHistory(); renderGuide(); $('navPending').textContent = pending().length; }
 function renderCurrentView() { if (activeView === 'overview') renderOverview(); if (activeView === 'students') renderStudents(); if (activeView === 'history') renderHistory(); if (activeView === 'guide') renderGuide(); }
@@ -137,37 +161,90 @@ function renderOverview() {
   $('overviewProgress').max=total||1;$('overviewProgress').value=done;$('overviewProgressLabel').textContent=done+' / '+total+' คน';
   $('continueScoring').textContent=remaining?'＋ เริ่มประเมิน':'ดูประวัติการประเมิน →';
   $('exportScores').disabled=!completed.length;
-  renderRoomAnalytics();renderCompletionDonut(done,total);
-  const recent=completed.slice().sort((a,b)=>new Date(b.updatedAt)-new Date(a.updatedAt));
-  const ordered=[...recent.map(r=>students.find(s=>s.id===r.studentId)),...pending()].filter(Boolean).slice(0,5);
-  $('activityRows').replaceChildren();
-  ordered.forEach(student=>{
-    const record=ownRecord(student.id),row=el('tr'),name=el('td'),person=el('div','activity-person');
-    person.append(el('span','mini-avatar avatar-tone-'+students.indexOf(student)%4,student.name.replace(/^(นาย|นางสาว|นาง)/,'').slice(0,1)),studentInfoNode(student,true));name.append(person);
-    const room=el('td');room.append(el('span','room-name',student.room),el('small','','ภาค'+student.term));
-    const timestamp=el('td','activity-date',record?dateLabel(record.updatedAt):'ยังไม่บันทึก');
-    const status=el('td');status.append(el('span','badge '+(record?'sage':'neutral'),record?'ประเมินแล้ว':'รอประเมิน'));
-    const action=el('td');action.append(actionButton(student,true));row.append(name,room,timestamp,status,action);$('activityRows').append(row);
-  });
-  $('activityEmpty').hidden=!!ordered.length;
+  updateAnalytics(true);
   $('assessmentPlan').replaceChildren();
   assessments.forEach(a=>{const item=el('div','plan-item '+a.status);const heading=el('div');heading.append(el('span','plan-label',a.label),el('span','badge '+(a.status==='open'?'sage':a.status==='completed'?'neutral':'warning'),a.status==='open'?'เปิดประเมิน':a.status==='completed'?'เก็บคะแนนแล้ว':'ยังไม่เปิด'));const number=el('div','plan-points');number.append(el('strong','',a.max),el('span','','คะแนน'));item.append(heading,number);if(a.status==='open'){const link=el('a','text-link','ไปรายชื่อนิสิต →');link.href='#students';item.append(link);}else item.append(el('span','helper',a.status==='completed'?'ดูคะแนนของคุณได้ในประวัติ':'วางแผนไว้ ยังไม่รับคะแนน'));$('assessmentPlan').append(item);});
 }
-function renderRoomAnalytics() {
-  const chart=$('roomProgressChart');chart.replaceChildren();
-  const groups=new Map();students.forEach(student=>{const key=student.term+'|'+student.room;if(!groups.has(key))groups.set(key,{room:student.room,term:student.term,total:0,done:0});const group=groups.get(key);group.total++;if(ownRecord(student.id))group.done++;});
+function bindChartTooltip(node,text){
+  node.addEventListener('pointerenter',event=>{if(event.pointerType!=='touch')window.SPUI?.showTooltip?.(node,text);});
+  node.addEventListener('pointerleave',()=>window.SPUI?.hideTooltip?.());
+  node.addEventListener('focus',()=>window.SPUI?.showTooltip?.(node,text));
+  node.addEventListener('blur',()=>window.SPUI?.hideTooltip?.());
+}
+function chartScopeStudents(){return students.filter(student=>!chartRoomKey||student.term+'|'+student.room===chartRoomKey);}
+function chartFilteredStudents(){return chartScopeStudents().filter(student=>chartStatus==='all'||(chartStatus==='done')===!!ownRecord(student.id));}
+function roomLabel(key){if(!key)return 'ทุกห้อง';const parts=key.split('|');return parts[1]+' · ภาค'+parts[0];}
+function statusLabel(status){return status==='done'?'ประเมินแล้ว':status==='pending'?'รอประเมิน':'ทุกสถานะ';}
+function updateAnalytics(animate=false){
+  if(chartRoomKey&&!students.some(student=>student.term+'|'+student.room===chartRoomKey))chartRoomKey='';
+  window.SPUI?.hideTooltip?.();
+  $('roomProgressChart').classList.toggle('chart-updating',!animate);
+  renderRoomAnalytics();const scope=chartScopeStudents(),done=scope.filter(student=>ownRecord(student.id)).length;renderCompletionDonut(done,scope.length);
+  $('completionScope').textContent=chartRoomKey?roomLabel(chartRoomKey):'สัดส่วนนิสิตทุกห้องที่คุณรับผิดชอบ';
+  $('chartFilterSummary').textContent=roomLabel(chartRoomKey)+' · '+statusLabel(chartStatus)+' · '+chartFilteredStudents().length+' คน';
+  $('resetChartFilters').hidden=!chartRoomKey&&chartStatus==='all';
+  $('viewChartStudents').disabled=!students.length;$('viewDonutStudents').disabled=!students.length;
+  renderActivity();
+}
+function selectChartRoom(key,keyboard){
+  chartRoomKey=chartRoomKey===key?'':key;updateAnalytics();
+  if(keyboard){const button=[...document.querySelectorAll('[data-chart-room]')].find(node=>node.dataset.chartRoom===key);button?.focus({preventScroll:true});}
+}
+function selectChartStatus(status,keyboard){
+  chartStatus=chartStatus===status?'all':status;updateAnalytics();
+  if(keyboard)document.querySelector('[data-legend-status="'+status+'"]')?.focus({preventScroll:true});
+}
+function renderActivity(){
+  const filtered=chartFilteredStudents(),ids=new Set(filtered.map(student=>student.id));
+  const completed=records.filter(record=>record.assessment==='defense'&&ids.has(record.studentId)).sort((a,b)=>new Date(b.updatedAt)-new Date(a.updatedAt));
+  const waiting=filtered.filter(student=>!ownRecord(student.id));
+  const ordered=[...completed.map(record=>filtered.find(student=>student.id===record.studentId)),...waiting].filter(Boolean).slice(0,5);
+  $('activityScope').textContent=roomLabel(chartRoomKey)+' · '+statusLabel(chartStatus)+' · รายการล่าสุดและนิสิตที่รอประเมิน';
+  $('activityRows').replaceChildren();
+  ordered.forEach(student=>{
+    const record=ownRecord(student.id),row=el('tr'),name=el('td'),person=el('div','activity-person');
+    person.append(el('span','mini-avatar avatar-tone-'+students.indexOf(student)%4,String(student.name).replace(/^(นาย|นางสาว|นาง)/,'').slice(0,1)),studentInfoNode(student,true));name.append(person);
+    const room=el('td');room.append(el('span','room-name',student.room),el('small','','ภาค'+student.term));
+    const timestamp=el('td','activity-date',record?dateLabel(record.updatedAt):'ยังไม่บันทึก'),status=el('td');status.append(el('span','badge '+(record?'sage':'neutral'),record?'ประเมินแล้ว':'รอประเมิน'));
+    const action=el('td');action.append(actionButton(student,true));row.append(name,room,timestamp,status,action);$('activityRows').append(row);
+  });
+  $('activityEmpty').hidden=!!ordered.length;$('activityEmpty').textContent=students.length?'ไม่พบรายชื่อในตัวกรองนี้ ลองเลือกสถานะอื่นหรือล้างตัวกรองกราฟ':'ยังไม่มีรายชื่อนิสิตที่ได้รับมอบหมาย';
+}
+function renderRoomAnalytics(){
+  const chart=$('roomProgressChart');chart.replaceChildren();const groups=new Map();
+  students.forEach(student=>{const key=student.term+'|'+student.room;if(!groups.has(key))groups.set(key,{key,room:student.room,term:student.term,total:0,done:0});const group=groups.get(key);group.total++;if(ownRecord(student.id))group.done++;});
   if(!groups.size){chart.append(el('p','empty-inline','ยังไม่มีข้อมูลสำหรับแสดงกราฟ'));return;}
   const max=Math.max(4,Math.ceil(Math.max(...[...groups.values()].map(group=>group.total))/4)*4);
   const grid=el('div','chart-grid-lines');for(let i=4;i>=0;i--){const line=el('div');line.append(el('span','',Math.round(max*i/4)));grid.append(line);}chart.append(grid);
   const columns=el('div','room-columns');
-  groups.forEach(group=>{const column=el('div','room-column'),track=el('div','column-track'),bar=el('div','column-bar');bar.style.height=(group.total/max*100)+'%';bar.setAttribute('role','img');bar.setAttribute('aria-label',group.room+' ภาค'+group.term+' ประเมินแล้ว '+group.done+' จาก '+group.total+' คน');const pendingBar=el('span','column-pending'),doneBar=el('span','column-done');pendingBar.style.height=((group.total-group.done)/group.total*100)+'%';doneBar.style.height=(group.done/group.total*100)+'%';bar.append(pendingBar,doneBar);track.style.setProperty('--bar-height',(group.total/max*100)+'%');const count=el('span','column-count',group.done+'/'+group.total);track.append(count,bar);column.append(track,el('strong','',group.room),el('small','','ภาค'+group.term));columns.append(column);});chart.append(columns);
+  groups.forEach(group=>{
+    const column=el('button','room-column interactive-column'),track=el('span','column-track'),bar=el('span','column-bar');column.type='button';column.dataset.chartRoom=group.key;column.setAttribute('aria-pressed',String(chartRoomKey===group.key));
+    column.setAttribute('aria-label',roomLabel(group.key)+' ประเมินแล้ว '+group.done+' จาก '+group.total+' คน แตะเพื่อกรองข้อมูล');
+    bar.style.height=(group.total/max*100)+'%';bar.setAttribute('aria-hidden','true');const pendingBar=el('span','column-pending'),doneBar=el('span','column-done');pendingBar.style.height=((group.total-group.done)/group.total*100)+'%';doneBar.style.height=(group.done/group.total*100)+'%';bar.append(pendingBar,doneBar);
+    track.style.setProperty('--bar-height',(group.total/max*100)+'%');track.append(el('span','column-count',group.done+'/'+group.total),bar);column.append(track,el('strong','',group.room),el('small','','ภาค'+group.term));
+    column.addEventListener('click',event=>selectChartRoom(group.key,event.detail===0));bindChartTooltip(column,roomLabel(group.key)+'\nประเมินแล้ว '+group.done+' คน · รอ '+(group.total-group.done)+' คน\nแตะเพื่อกรองกราฟและรายชื่อ');columns.append(column);
+  });chart.append(columns);
 }
-function renderCompletionDonut(done,total) {
-  const percent=total?done/total:0,circumference=2*Math.PI*76;
-  $('completionDonut').innerHTML=`<svg viewBox="0 0 200 200" role="img" aria-label="ประเมินแล้ว ${done} จาก ${total} คน"><circle cx="100" cy="100" r="76" fill="none" stroke="${total?'#0f172a':'#e2e8f0'}" stroke-width="21"/><circle cx="100" cy="100" r="76" fill="none" stroke="#059669" stroke-width="21" stroke-dasharray="${percent*circumference} ${circumference}" transform="rotate(-90 100 100)"/></svg>`;
-  const center=el('div','donut-center');center.append(el('strong','',total),el('span','','นิสิตที่รับผิดชอบ'));$('completionDonut').append(center);
-  $('completionLegend').replaceChildren();[{label:'ประเมินแล้ว',value:done,color:'sage-dot'},{label:'รอประเมิน',value:total-done,color:'navy-dot'}].forEach(item=>{const row=el('div'),name=el('span');name.append(el('i','legend-dot '+item.color),document.createTextNode(item.label));row.append(name,el('strong','',(total?(item.color==='sage-dot'?Math.round(percent*100):100-Math.round(percent*100)):0)+'%'),el('small','',item.value+' คน'));$('completionLegend').append(row);});
+function renderCompletionDonut(done,total){
+  const fraction=total?done/total:0,circumference=2*Math.PI*76,svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 200 200');svg.setAttribute('role','group');svg.setAttribute('aria-label','สถานะการประเมิน แตะส่วนกราฟหรือป้ายกำกับเพื่อกรอง');
+  [{status:'pending',color:total?'#0f172a':'#e2e8f0',value:total-done},{status:'done',color:'#059669',value:done}].forEach(item=>{
+    const circle=document.createElementNS('http://www.w3.org/2000/svg','circle');Object.entries({cx:100,cy:100,r:76,fill:'none',stroke:item.color,'stroke-width':21}).forEach(([key,value])=>circle.setAttribute(key,String(value)));
+    if(item.status==='done'){circle.setAttribute('stroke-dasharray',(fraction*circumference)+' '+circumference);circle.setAttribute('transform','rotate(-90 100 100)');}
+    circle.classList.add('interactive-sector');circle.dataset.chartStatus=item.status;circle.setAttribute('role','button');circle.setAttribute('tabindex',total?'0':'-1');circle.setAttribute('aria-label',statusLabel(item.status)+' '+item.value+' คน');circle.setAttribute('aria-pressed',String(chartStatus===item.status));
+    circle.style.opacity=chartStatus!=='all'&&chartStatus!==item.status?'.3':'1';
+    if(total){circle.addEventListener('click',event=>selectChartStatus(item.status,event.detail===0));circle.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();selectChartStatus(item.status,true);}});bindChartTooltip(circle,statusLabel(item.status)+' '+item.value+' คน\nแตะเพื่อกรองตารางรายชื่อ');}svg.append(circle);
+  });
+  $('completionDonut').replaceChildren(svg);const center=el('div','donut-center'),value=chartStatus==='done'?done:chartStatus==='pending'?total-done:total;center.append(el('strong','',value),el('span','',chartStatus==='all'?'นิสิตที่รับผิดชอบ':statusLabel(chartStatus)));$('completionDonut').append(center);
+  $('completionLegend').replaceChildren();[{status:'done',value:done,color:'sage-dot'},{status:'pending',value:total-done,color:'navy-dot'}].forEach(item=>{
+    const row=el('button','legend-filter'),name=el('span');row.type='button';row.disabled=!total;row.dataset.legendStatus=item.status;row.setAttribute('aria-pressed',String(chartStatus===item.status));
+    name.append(el('i','legend-dot '+item.color),document.createTextNode(statusLabel(item.status)));row.append(name,el('strong','',(total?(item.status==='done'?Math.round(fraction*100):100-Math.round(fraction*100)):0)+'%'),el('small','',item.value+' คน'));row.addEventListener('click',event=>selectChartStatus(item.status,event.detail===0));bindChartTooltip(row,'กรองเฉพาะ'+statusLabel(item.status)+' '+item.value+' คน');$('completionLegend').append(row);
+  });
 }
+function openChartStudents(){
+  if(!navigate('students'))return;studentFilter=chartStatus;$('roomFilter').value=chartRoomKey;$('studentSearch').value='';renderStudents();window.SPUI?.refreshSelects?.();
+}
+$('resetChartFilters').addEventListener('click',()=>{chartRoomKey='';chartStatus='all';updateAnalytics();});
+['viewChartStudents','viewDonutStudents','chartActivityMore'].forEach(id=>$(id).addEventListener('click',openChartStudents));
 $('globalSearchForm').addEventListener('submit',event=>{event.preventDefault();if(!loaded)return;if(!navigate('students'))return;studentFilter='all';$('roomFilter').value='';$('studentSearch').value=$('globalSearch').value;renderStudents();$('studentSearch').focus({preventScroll:true});});
 $('exportScores').addEventListener('click',()=>{
   const lines=[['รหัสนิสิต','ชื่อ-สกุล','ห้องสอบ','แผนการเรียน','หมวด','คะแนนเต็ม 20','บันทึกล่าสุด','เวอร์ชันเกณฑ์',...defenseQuestions().map(q=>q.label+' (0–4)')]];
@@ -206,7 +283,7 @@ function openStudent(id) {
 function revealGroup(key) {
   const group=$('group-'+key);if(!group)return;
   document.querySelectorAll('.rubric-group').forEach(node=>{node.open=node===group;});
-  group.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
+  group.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
   group.querySelector('summary').focus({preventScroll:true});
 }
 function renderRubric() {
@@ -270,7 +347,7 @@ $('confirmSave').addEventListener('click',async()=>{
     records=records.filter(r=>!(r.assessment==='defense'&&r.studentId===student.id));records.push({assessment:'defense',studentId:student.id,scores:result.criterionScores || criterionRawScores(payloadScores),questionScores:payloadScores,rubricVersion:result.rubricVersion || defense().rubricVersion,total:result.total,updatedAt:new Date().toISOString()});
     scores={};originalScores={};selectedStudent=null;$('reviewDialog').close();$('gradeContent').hidden=true;$('saveSuccess').hidden=false;
     $('savedStudent').textContent=student.name+' · '+student.id;$('savedTotal').textContent=Number(result.total).toFixed(2);
-    $('nextStudent').textContent=pending().length?'ประเมินคนถัดไป →':'กลับภาพรวมงานของฉัน';renderAll();window.scrollTo({top:0,behavior:'instant'});
+    $('nextStudent').textContent=pending().length?'ประเมินคนถัดไป →':'กลับภาพรวมงานของฉัน';renderAll();scrollTopNow();
   }catch(error){$('saveError').textContent=error.message+' หากไม่แน่ใจว่าสำเร็จ สามารถยืนยันซ้ำได้โดยไม่เพิ่มรายการซ้ำ';$('saveError').hidden=false;}
   finally{busy=false;$('confirmSave').disabled=false;$('confirmSave').textContent='ยืนยันบันทึกคะแนน';$('backToGrade').disabled=false;$('closeReview').disabled=false;}
 });
@@ -297,3 +374,5 @@ function initializeGoogle(){
   const cached=storageGet();if(cached)login(cached);
 }
 $('retryAuth').addEventListener('click',initializeGoogle);window.addEventListener('load',initializeGoogle);
+
+window.SP_APP_READY=true;

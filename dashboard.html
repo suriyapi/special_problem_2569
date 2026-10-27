@@ -11,10 +11,10 @@
 
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=questions15">
-<link rel="stylesheet" href="dashboard.css?v=questions15"><link rel="stylesheet" href="reference.css?v=questions15"><link rel="stylesheet" href="responsive.css?v=questions15"><script src="ui.js?v=questions15" defer></script>
+<link rel="stylesheet" href="styles.css?v=safari-charts1">
+<link rel="stylesheet" href="dashboard.css?v=safari-charts1"><link rel="stylesheet" href="reference.css?v=safari-charts1"><link rel="stylesheet" href="responsive.css?v=safari-charts1"><script src="boot.js?v=safari-charts1" defer></script><script src="ui.js?v=safari-charts1" defer></script>
 </head>
-<body>
+<body><div id="fatalRecovery" hidden role="alert" style="position:fixed;inset:0;z-index:999;background:#f8fafc;overflow:auto;padding:24px"><section style="max-width:440px;margin:60px auto;background:white;border:1px solid #e2e8f0;border-radius:12px;padding:28px;font-family:sans-serif"><h2 style="font-size:22px;margin-bottom:16px">เปิดหน้านี้ไม่สำเร็จ</h2><p id="fatalRecoveryText" style="font-size:15px;line-height:1.9;color:#475569"></p><button id="recoveryReload" type="button" class="btn" style="margin-top:20px">โหลดหน้าใหม่</button></section></div>
 
 <div class="app-shell admin-shell">
 <aside class="sidebar" id="sidebar"><button id="closeMobileMenu" class="icon-button drawer-close" aria-label="ปิดเมนู"><span aria-hidden="true">×</span></button><a class="wordmark" href="index.html"><span class="brand-icon"><svg class="icon"><use href="icons.svg#chart"/></svg></span><span>Special Problem<small>ระบบประเมินโครงงาน</small></span></a><span class="nav-label">พื้นที่ทำงาน</span><nav class="side-nav" aria-label="เมนูหลัก"><a href="index.html#overview"><svg class="icon"><use href="icons.svg#grid"/></svg>ภาพรวมงานของฉัน</a><a href="index.html#students"><svg class="icon"><use href="icons.svg#users"/></svg>รายชื่อนิสิต</a><a href="index.html#history"><svg class="icon"><use href="icons.svg#clock"/></svg>ประวัติการประเมิน</a><a href="index.html#guide"><svg class="icon"><use href="icons.svg#book"/></svg>คู่มือและเกณฑ์</a><a href="dashboard.html" aria-current="page"><svg class="icon"><use href="icons.svg#chart"/></svg>แดชบอร์ดผู้ดูแล</a></nav><div class="sidebar-course"><span class="badge info">สำหรับผู้ดูแลระบบ</span><strong>ภาพรวมทั้งรายวิชา</strong><span>ตรวจคะแนนและความคืบหน้าทุกห้อง</span></div><div class="sidebar-bottom"><div class="account-person"><span class="avatar"><svg class="icon"><use href="icons.svg#shield"/></svg></span><div><strong>ผู้ดูแลรายวิชา</strong><small>จำกัดสิทธิ์การเข้าถึง</small></div></div><button class="sign-out" id="adminLogout">ออกจากระบบ</button></div></aside>
@@ -46,17 +46,17 @@
       <div class="dashboard-grid">
 
       <div class="card">
-        <h2>คะแนนเฉลี่ยแยกตามห้องสอบ/แผนการเรียน</h2>
+        <h2>คะแนนเฉลี่ยแยกตามห้องสอบ/แผนการเรียน</h2><p class="chart-hint">แตะแถบกราฟเพื่อกรองรายชื่อนิสิต</p>
         <div id="roomChart"></div>
       </div>
 
       <div class="card">
-        <h2>คะแนนเฉลี่ยแยกตามเกณฑ์การประเมิน</h2>
-        <div id="criteriaChart"></div>
+        <h2>คะแนนเฉลี่ยแยกตามเกณฑ์การประเมิน</h2><p class="chart-hint">แตะแถบกราฟเพื่อดูรายละเอียดคะแนน</p>
+        <div id="criteriaChart"></div><div id="criteriaChartDetail" class="chart-detail-panel" role="status" hidden></div>
       </div>
 
       <div class="card">
-        <h2>ความคืบหน้าของกรรมการ</h2>
+        <h2>ความคืบหน้าของกรรมการ</h2><p class="chart-hint">แตะแถบความคืบหน้าเพื่อดูรายชื่อนิสิต</p>
         <div id="evaluatorProgress"></div>
       </div>
 
@@ -100,6 +100,30 @@
   // เก็บ token เฉพาะ session ของแดชบอร์ด
   const TOKEN_STORAGE_KEY = 'kupp_google_id_token';
 
+  function adminStorage(value) {
+    try { if (arguments.length === 0) return sessionStorage.getItem(TOKEN_STORAGE_KEY); if(value)sessionStorage.setItem(TOKEN_STORAGE_KEY,value);else sessionStorage.removeItem(TOKEN_STORAGE_KEY); } catch(error) { return null; }
+  }
+  async function dashboardJSON(url) {
+    const controller = typeof AbortController === 'function' ? new AbortController() : null; let timer;
+    try {
+      return await Promise.race([
+        fetch(url + '&_ts=' + Date.now(), controller ? { signal: controller.signal } : {}).then(function(response) { if(!response.ok)throw new Error('เชื่อมต่อระบบไม่สำเร็จ');return response.json(); }),
+        new Promise(function(resolve,reject) { timer=setTimeout(function() { reject(new Error('การเชื่อมต่อใช้เวลานาน กรุณาลองอีกครั้ง'));if(controller)controller.abort(); },25000); })
+      ]);
+    } finally { clearTimeout(timer); }
+  }
+  function dashEl(tag,cls,text) { const node=document.createElement(tag);if(cls)node.className=cls;if(text!==undefined)node.textContent=text;return node; }
+  function chartTooltip(node,text) {
+    node.addEventListener('pointerenter',function(event){if(event.pointerType!=='touch' && window.SPUI)SPUI.showTooltip(node,text);});
+    node.addEventListener('pointerleave',function(){if(window.SPUI)SPUI.hideTooltip();});
+    node.addEventListener('focus',function(){if(window.SPUI)SPUI.showTooltip(node,text);});
+    node.addEventListener('blur',function(){if(window.SPUI)SPUI.hideTooltip();});
+  }
+  function dashboardBar(label,value,pct) {
+    const button=dashEl('button','bar-row admin-interactive-bar');button.type='button';
+    const head=dashEl('span','bar-row-head');head.append(dashEl('span','label',label),dashEl('span','value',value));
+    const track=dashEl('span','bar-track'),fill=dashEl('span','bar-fill');fill.style.width=pct+'%';track.append(fill);button.append(head,track);return button;
+  }
   function fmtTerm(term) { return TERM_LABEL[term] || term; }
 
   // ---------- Google Sign-In ----------
@@ -122,11 +146,12 @@
       theme: 'outline', size: 'large', text: 'signin_with', locale: 'th'
     });
 
-    const cached = sessionStorage.getItem(TOKEN_STORAGE_KEY);
+    const cached = adminStorage();
     if (cached) loginWithToken(cached, true);
   });
 
   function loginWithToken(token, silent) {
+    if(window.SPRecovery){SPRecovery.resetLayout();SPRecovery.scrollTop();}
     currentIdToken = token;
     document.getElementById('authErrMsg').style.display = 'none';
     loadDashboard(silent);
@@ -168,8 +193,7 @@
 
     const version = ++requestVersion;
     const assessmentId = document.getElementById('assessmentSelect').value;
-    fetch(GAS_URL + '?action=getDashboard&assessment=' + assessmentId + '&idToken=' + encodeURIComponent(currentIdToken))
-      .then(function (res) { return res.json(); })
+    dashboardJSON(GAS_URL + '?action=getDashboard&assessment=' + assessmentId + '&idToken=' + encodeURIComponent(currentIdToken))
       .then(function (data) {
         if (version !== requestVersion) return;
         if (data.status === 'error') throw new Error(data.message);
@@ -178,8 +202,9 @@
         document.getElementById('loadingMsg').style.display = 'none';
 
         if (data && data.status === 'unauthorized') {
+          document.getElementById('adminGlobalSearch').disabled = true;
           currentIdToken = null;
-          sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+          adminStorage(null);
           stopAutoRefresh();
           document.getElementById('loginGate').style.display = 'block';
           document.getElementById('dashboardContent').style.display = 'none';
@@ -189,7 +214,7 @@
           return;
         }
 
-        sessionStorage.setItem(TOKEN_STORAGE_KEY, currentIdToken);
+        adminStorage(currentIdToken);
         document.getElementById('loginGate').style.display = 'none';
         document.getElementById('dashboardContent').style.display = 'block';
         document.getElementById('updatedLabel').textContent = 'อัปเดตล่าสุด ' + new Date().toLocaleTimeString('th-TH') + ' · รีเฟรชอัตโนมัติทุก 30 วิ';
@@ -217,6 +242,7 @@
           const errEl = document.getElementById('errMsg');
           errEl.textContent = 'โหลดข้อมูลไม่สำเร็จ: ' + err.message + ' (ตรวจสอบว่า Code.gs มีฟังก์ชัน getDashboard และ deploy เวอร์ชันล่าสุดแล้ว)';
           errEl.style.display = 'block';
+          if(window.SPRecovery){SPRecovery.resetLayout();SPRecovery.scrollTop();}
         }
       });
   }
@@ -247,23 +273,18 @@
   }
 
   function renderCriteriaChart(criteriaAverages) {
-    const wrap = document.getElementById('criteriaChart');
-    wrap.innerHTML = '';
-    if (!criteriaAverages || criteriaAverages.length === 0) {
-      wrap.innerHTML = '<div class="no-results">ยังไม่มีข้อมูลคะแนน</div>';
-      return;
-    }
-    criteriaAverages.forEach(function (c) {
-      const pct = c.avg !== null ? Math.max(0, Math.min(100, c.avg / 4 * 100)) : 0;
-      const row = document.createElement('div');
-      row.className = 'bar-row';
-      row.innerHTML =
-        '<div class="bar-row-head">' +
-          '<span class="label">' + c.label + ' <span class="count">(น้ำหนัก ' + c.weight + ')</span></span>' +
-          '<span class="value">' + (c.avg !== null ? c.avg + '/4' : '-') + '</span>' +
-        '</div>' +
-        '<div class="bar-track"><div class="bar-fill" style="width:' + pct + '%"></div></div>';
-      wrap.appendChild(row);
+    const wrap=document.getElementById('criteriaChart'),detail=document.getElementById('criteriaChartDetail');wrap.replaceChildren();detail.hidden=true;
+    if(!criteriaAverages || !criteriaAverages.length){wrap.append(dashEl('div','no-results','ยังไม่มีข้อมูลคะแนน'));return;}
+    criteriaAverages.forEach(function(c){
+      const pct=c.avg!==null?Math.max(0,Math.min(100,c.avg/4*100)):0;
+      const row=dashboardBar(c.label+' (น้ำหนัก '+c.weight+')',c.avg!==null?c.avg+'/4':'—',pct);row.setAttribute('aria-expanded','false');
+      row.addEventListener('click',function(){
+        const same=detail.dataset.key===c.label&&!detail.hidden;wrap.querySelectorAll('button').forEach(function(button){button.setAttribute('aria-expanded','false');});
+        if(same){detail.hidden=true;return;}
+        detail.dataset.key=c.label;detail.replaceChildren(dashEl('strong','',c.label),dashEl('p','',c.avg===null?'ยังไม่มีคะแนนสำหรับด้านนี้':'คะแนนเฉลี่ย '+c.avg+'/4 · เทียบตามน้ำหนัก '+(c.avg/4*c.weight).toFixed(2)+'/'+c.weight+' คะแนน'));
+        const link=dashEl('a','text-link','ดูคำถามและเกณฑ์การประเมิน →');link.href='index.html#guide';detail.append(link);detail.hidden=false;row.setAttribute('aria-expanded','true');
+      });
+      chartTooltip(row,c.label+'\n'+(c.avg===null?'ยังไม่มีคะแนน':'เฉลี่ย '+c.avg+'/4')+' · แตะเพื่อดูรายละเอียด');wrap.append(row);
     });
   }
 
@@ -319,8 +340,9 @@
         '<span class="badge ' + badgeCls + '">' + ev.done + '/' + ev.expected + '</span>';
       row.appendChild(head);
 
-      const track = document.createElement('div');
-      track.className = 'bar-track';
+      const track = document.createElement('button');
+      track.type='button';track.setAttribute('aria-expanded','false');track.setAttribute('aria-label','ดูรายชื่อนิสิตของ '+ev.name);
+      track.className = 'bar-track evaluator-track';
       track.innerHTML = '<div class="bar-fill' + fillCls + '" style="width:' + pct + '%"></div>';
       row.appendChild(track);
 
@@ -341,31 +363,27 @@
         const showing = detail.classList.toggle('show');
         toggle.textContent = showing ? 'ซ่อนรายชื่อ ↑' : 'ดูรายชื่อ ↓';
         toggle.setAttribute('aria-expanded', String(showing));
+        track.setAttribute('aria-expanded',String(showing));
       });
 
+      track.addEventListener('click',function(){toggle.click();});chartTooltip(track,ev.name+'\nประเมินแล้ว '+ev.done+'/'+ev.expected+' คน · แตะเพื่อดูรายชื่อ');
       wrap.appendChild(row);
     });
   }
 
   function renderRoomChart(byRoom) {
-    const wrap = document.getElementById('roomChart');
-    wrap.innerHTML = '';
-    if (!byRoom || byRoom.length === 0) {
-      wrap.innerHTML = '<div class="no-results">ยังไม่มีข้อมูลคะแนน</div>';
-      return;
-    }
-    byRoom.forEach(function (g) {
-      const pct = g.avg !== null ? Math.max(0, Math.min(100, g.avg / dashboardMax * 100)) : 0;
-      const row = document.createElement('div');
-      row.className = 'bar-row';
-      row.innerHTML =
-        '<div class="bar-row-head">' +
-          '<span class="label">' + g.room + ' · ' + fmtTerm(g.term) +
-            ' <span class="count">(ครบแล้ว ' + g.fullyEvaluated + '/' + g.studentCount + ' คน)</span></span>' +
-          '<span class="value">' + (g.avg !== null ? g.avg + '/' + dashboardMax : '-') + '</span>' +
-        '</div>' +
-        '<div class="bar-track"><div class="bar-fill" style="width:' + pct + '%"></div></div>';
-      wrap.appendChild(row);
+    const wrap=document.getElementById('roomChart');wrap.replaceChildren();
+    if(!byRoom || !byRoom.length){wrap.append(dashEl('div','no-results','ยังไม่มีข้อมูลคะแนน'));return;}
+    byRoom.forEach(function(group){
+      const pct=group.avg!==null?Math.max(0,Math.min(100,group.avg/dashboardMax*100)):0;
+      const label=group.room+' · '+fmtTerm(group.term)+' (ครบ '+group.fullyEvaluated+'/'+group.studentCount+' คน)';
+      const row=dashboardBar(label,group.avg!==null?group.avg+'/'+dashboardMax:'—',pct);
+      row.setAttribute('aria-label',label+' แตะเพื่อเปิดรายชื่อนิสิตห้องนี้');
+      row.addEventListener('click',function(){
+        document.getElementById('dashboardRoomFilter').value=group.term+'|'+group.room;document.getElementById('searchInput').value='';currentPage=1;applyFilterSort();renderTablePage();
+        if(window.SPUI)SPUI.refreshSelects();document.getElementById('searchInput').scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
+        document.getElementById('searchInput').focus({preventScroll:true});
+      });chartTooltip(row,label+'\n'+(group.avg!==null?'คะแนนเฉลี่ย '+group.avg+'/'+dashboardMax:'ยังไม่มีคะแนน')+'\nแตะเพื่อกรองรายชื่อ');wrap.append(row);
     });
   }
 
@@ -497,9 +515,9 @@
   });
   document.getElementById('dashboardRoomFilter').addEventListener('change', function() { currentPage = 1; applyFilterSort(); renderTablePage(); });
   document.getElementById('adminLogout').addEventListener('click', function() {
-    window.SPUI.setMenu(false);
+    if(window.SPRecovery)SPRecovery.resetLayout();
     document.getElementById('adminGlobalSearch').disabled = true;
-    currentIdToken = null; requestVersion++; sessionStorage.removeItem(TOKEN_STORAGE_KEY); stopAutoRefresh();
+    currentIdToken = null; requestVersion++; adminStorage(null); stopAutoRefresh();
     document.getElementById('dashboardContent').style.display = 'none';
     document.getElementById('loginGate').style.display = 'block';
     document.getElementById('loadingMsg').style.display = 'none';
@@ -513,6 +531,7 @@
     document.getElementById('searchInput').focus({ preventScroll: true });
   });
   document.getElementById('refreshBtn').addEventListener('click', function () { loadDashboard(false); });
+  window.SP_DASH_READY=true;
 </script>
 </body>
 </html>

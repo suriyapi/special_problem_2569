@@ -17,6 +17,8 @@ await page.goto('http://scoring.test/dashboard.html');await page.waitForFunction
 await page.screenshot({path:path.join(artifacts,"redesign-dashboard-login.png"),fullPage:true});
 await page.evaluate(()=>testLogin({credential:'token'}));await page.locator('#dashboardContent').waitFor({state:'visible'});
 assert.match(await page.locator('#statGrid').textContent(),/18\/20/);assert.equal(await page.locator('#studentTbody tr').count(),10);
+await page.locator('#criteriaChart button').first().click();assert.equal(await page.locator('#criteriaChartDetail').isVisible(),true);assert.match(await page.locator('#criteriaChartDetail').textContent(),/คะแนนเฉลี่ย/);await page.locator('#roomChart button').first().click();assert.equal(await page.locator('#studentTbody tr').count(),7);await page.locator('#dashboardRoomFilter').selectOption('',{force:true});assert.equal(await page.locator('#studentTbody tr').count(),10);
+await page.locator('.evaluator-track').click();assert.equal(await page.locator('.evaluator-track').getAttribute('aria-expanded'),'true');await page.locator('.evaluator-track').click();
 await page.locator('.eval-toggle').click();assert.equal(await page.locator('.eval-toggle').getAttribute('aria-expanded'),'true');
 await page.locator('#nextPage').click();assert.equal(await page.locator('#studentTbody tr').count(),3);
 await page.locator('#assessmentSelect').selectOption('proposal',{force:true});await page.waitForFunction(()=>document.getElementById('statGrid').textContent.includes('8/10'));

@@ -8,6 +8,10 @@ let assessments = [], evaluator = null, token = null, students = [], records = [
 let selectedStudent = null, scores = {}, originalScores = {}, busy = false, loading = false, loaded = false;
 let studentFilter = 'all', authVersion = 0, workspaceVersion = 0, activeView = 'overview';
 const defense = () => assessments.find(a => a.id === 'defense');
+const defenseQuestions = () => defense().criteria.flatMap(c => c.questions || []);
+const completeQuestionRecord = record => record?.rubricVersion === defense().rubricVersion && defenseQuestions().every(q => Number.isInteger(record.questionScores?.[q.key]) && record.questionScores[q.key] >= 0 && record.questionScores[q.key] <= 4);
+const groupPoints = (criterion, answers = scores) => criterion.questions.reduce((sum,q) => sum + (answers[q.key] ?? 0) / 4 * q.weight, 0);
+const criterionRawScores = answers => Object.fromEntries(defense().criteria.map(c => [c.key, groupPoints(c,answers) / c.weight * 4]));
 const ownRecord = (id, section = 'defense') => records.find(r => r.studentId === id && r.assessment === section);
 const pending = () => students.filter(s => !ownRecord(s.id));
 const dirty = () => JSON.stringify(scores) !== JSON.stringify(originalScores);
@@ -91,7 +95,7 @@ async function loadWorkspace() {
     if (data.status === 'unauthorized') { logout(true); return; }
     if (!Array.isArray(config.assessments) || data.status !== 'ok' || !Array.isArray(data.students) || !Array.isArray(data.records)) throw new Error('ระบบยังไม่พร้อมโหลดพื้นที่ทำงาน กรุณาติดต่อผู้ดูแลรายวิชา');
     assessments = config.assessments; students = data.students; records = data.records;
-    if (!defense()?.criteria?.length) throw new Error('ไม่พบเกณฑ์สอบวิพากษ์');
+    if (!defense()?.rubricVersion || defenseQuestions().length !== 15) throw new Error('เกณฑ์สอบวิพากษ์ปรับเป็น 15 ข้อย่อย กรุณารีเฟรชหรือติดต่อผู้ดูแล');
     loaded = true; populateRooms(); renderAll(); navigate(activeView,{force:true});
   } catch(error) { if (version === workspaceVersion) { $('workspaceErrorText').textContent = error.message; $('workspaceError').hidden = false; } }
   finally { if (version === workspaceVersion) { loading = false; $('workspaceLoading').hidden = true; } }
@@ -166,8 +170,8 @@ function renderCompletionDonut(done,total) {
 }
 $('globalSearchForm').addEventListener('submit',event=>{event.preventDefault();if(!loaded)return;if(!navigate('students'))return;studentFilter='all';$('roomFilter').value='';$('studentSearch').value=$('globalSearch').value;renderStudents();$('studentSearch').focus({preventScroll:true});});
 $('exportScores').addEventListener('click',()=>{
-  const lines=[['รหัสนิสิต','ชื่อ-สกุล','ห้องสอบ','แผนการเรียน','หมวด','คะแนนเต็ม 20','บันทึกล่าสุด']];
-  records.filter(record=>record.assessment==='defense').forEach(record=>{const student=students.find(s=>s.id===record.studentId);if(student)lines.push([student.id,student.name,student.room,student.term,'สอบวิพากษ์',record.total,record.updatedAt]);});
+  const lines=[['รหัสนิสิต','ชื่อ-สกุล','ห้องสอบ','แผนการเรียน','หมวด','คะแนนเต็ม 20','บันทึกล่าสุด','เวอร์ชันเกณฑ์',...defenseQuestions().map(q=>q.label+' (0–4)')]];
+  records.filter(record=>record.assessment==='defense').forEach(record=>{const student=students.find(s=>s.id===record.studentId);if(student)lines.push([student.id,student.name,student.room,student.term,'สอบวิพากษ์',record.total,record.updatedAt,record.rubricVersion || 'defense-v1',...defenseQuestions().map(q=>record.questionScores?.[q.key] ?? '')]);});
   const cell=value=>{let text=String(value??'');if(/^[=+@-]/.test(text))text="'"+text;return '"'+text.replaceAll('"','""')+'"';};
   const csv='\ufeff'+lines.map(row=>row.map(cell).join(',')).join('\r\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const link=el('a');link.href=url;link.download='คะแนนสอบวิพากษ์ของฉัน.csv';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 });
@@ -191,37 +195,65 @@ $('clearStudentFilters').addEventListener('click',()=>{$('studentSearch').value=
 function openStudent(id) {
   if (!allowLeave()) return;
   const student=students.find(s=>s.id===id);if(!student)return;
-  selectedStudent=student;const record=ownRecord(id);scores=record?{...record.scores}:{};originalScores={...scores};
+  selectedStudent=student;const record=ownRecord(id);scores=completeQuestionRecord(record)?{...record.questionScores}:{};originalScores={...scores};
   $('gradeContent').hidden=false;$('saveSuccess').hidden=true;$('globalMessage').hidden=true;
   $('gradeStudentName').textContent=student.name;$('gradeStudentMeta').textContent=student.id+' · '+student.room+' · ภาค'+student.term;
   $('gradeStudentAdvisor').textContent='อาจารย์ที่ปรึกษา: '+student.advisor;$('gradeStudentTopic').textContent=student.topic;
-  $('editingNotice').hidden=!record;$('editingNotice').textContent=record?'กำลังแก้ไขคะแนนที่บันทึกเมื่อ '+dateLabel(record.updatedAt)+' · การยืนยันจะอัปเดตคะแนนเดิมของคุณ':'';
+  $('editingNotice').hidden=!record;
+  $('editingNotice').textContent=!record?'':completeQuestionRecord(record)?'กำลังแก้ไขคะแนนที่บันทึกเมื่อ '+dateLabel(record.updatedAt)+' · การยืนยันจะอัปเดตคะแนนเดิมของคุณ':'คะแนนเดิม '+Number(record.total).toFixed(2)+'/20 ประเมินแบบ 5 ด้าน ยังไม่มีรายละเอียดข้อย่อย กรุณาประเมินใหม่ให้ครบ 15 ข้อก่อนยืนยันอัปเดต คะแนนเดิมจะยังอยู่จนกว่าจะยืนยัน';
   renderRubric();navigate('grade',{force:true});
+}
+function revealGroup(key) {
+  const group=$('group-'+key);if(!group)return;
+  document.querySelectorAll('.rubric-group').forEach(node=>{node.open=node===group;});
+  group.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
+  group.querySelector('summary').focus({preventScroll:true});
 }
 function renderRubric() {
   $('criteria').replaceChildren();
+  const firstIncomplete=defense().criteria.find(c=>c.questions.some(q=>scores[q.key]===undefined)) || defense().criteria[0];
   defense().criteria.forEach((c,index)=>{
-    const field=el('fieldset','criterion-card card');const legend=el('legend');legend.append(el('span','criterion-number',String(index+1)),el('span','',c.label));
-    const meta=el('div','criterion-meta');meta.append(el('span','badge neutral',c.mapping),el('span','criterion-weight','เต็ม '+c.weight+' คะแนน'));
-    const evidence=el('p','criterion-evidence',c.evidence);const scale=el('div','scale');
-    SCALE.forEach((label,value)=>{const option=el('label'),input=el('input'),box=el('span'),number=el('b','',value);input.type='radio';input.name=c.key;input.value=value;input.checked=scores[c.key]===value;input.setAttribute('aria-label',value+' '+label);input.addEventListener('change',()=>{scores[c.key]=value;updateTotal();updateLevel(c);});box.append(number,el('span','',label));option.append(input,box);scale.append(option);});
-    const selected=el('div','selected-level');selected.id='level-'+c.key;selected.setAttribute('aria-live','polite');
-    const details=el('details'),summary=el('summary','','ดูคำอธิบายทุกระดับ');const list=el('ol');list.start=0;c.levels.forEach(level=>list.append(el('li','',level)));details.append(summary,list);
-    field.append(legend,meta,evidence,scale,selected,details);$('criteria').append(field);updateLevel(c);
+    const group=el('details','rubric-group card');group.id='group-'+c.key;group.dataset.key=c.key;group.open=c.key===firstIncomplete.key;
+    const summary=el('summary','rubric-group-heading'),title=el('div','rubric-group-title');title.append(el('span','criterion-number',String(index+1)),el('strong','',c.label));
+    const meta=el('div','rubric-group-meta');const progress=el('span','badge neutral');progress.id='group-progress-'+c.key;meta.append(progress,el('span','criterion-weight',c.weight+' คะแนน'));summary.append(title,meta);
+    const intro=el('div','rubric-group-intro');intro.append(el('span','badge neutral',c.mapping),el('p','',c.evidence));
+    const body=el('div','rubric-group-body');body.append(intro);
+    c.questions.forEach((q,questionIndex)=>{
+      const field=el('fieldset','question-card');field.dataset.question=q.key;
+      const legend=el('legend');legend.append(el('span','question-number',(index+1)+'.'+(questionIndex+1)),el('span','',q.label));
+      const weight=el('div','question-weight','น้ำหนัก '+q.weight+' คะแนน');
+      const evidence=el('p','criterion-evidence',q.evidence),scale=el('div','scale');
+      SCALE.forEach((label,value)=>{const option=el('label'),input=el('input'),box=el('span'),number=el('b','',value);input.type='radio';input.name=q.key;input.value=value;input.checked=scores[q.key]===value;input.setAttribute('aria-label',value+' '+label);input.addEventListener('change',()=>{scores[q.key]=value;updateTotal();updateLevel(q);});box.append(number,el('span','',label));option.append(input,box);scale.append(option);});
+      const selected=el('div','selected-level');selected.id='level-'+q.key;selected.setAttribute('aria-live','polite');
+      const details=el('details','question-help'),helpSummary=el('summary','','ดูคำถามสำหรับซักถามและคำอธิบายคะแนน');const prompt=el('p','interview-prompt','คำถามเสนอแนะ: '+q.prompt),list=el('ol');list.start=0;q.levels.forEach(level=>list.append(el('li','',level)));details.append(helpSummary,prompt,list);
+      field.append(legend,weight,evidence,scale,selected,details);body.append(field);
+    });
+    const next=el('button','btn secondary group-next',index<defense().criteria.length-1?'ด้านถัดไป →':'ตรวจสอบคะแนนทั้ง 15 ข้อ →');next.type='button';next.dataset.nextGroup=c.key;
+    next.addEventListener('click',()=>{if(index<defense().criteria.length-1)revealGroup(defense().criteria[index+1].key);else $('reviewScore').click();});
+    body.append(next);group.append(summary,body);group.addEventListener('toggle',()=>{if(group.open)document.querySelectorAll('.rubric-group').forEach(other=>{if(other!==group)other.open=false;});});$('criteria').append(group);
+    c.questions.forEach(updateLevel);
   });updateTotal();
 }
-function updateLevel(c){const node=$('level-'+c.key),value=scores[c.key];node.textContent=value===undefined?'เลือกคะแนน 0–4 ที่ตรงกับผลงาน':value+' · '+c.levels[value];node.classList.toggle('chosen',value!==undefined);}
-function totalScore(){return defense().criteria.reduce((sum,c)=>sum+(scores[c.key]??0)/4*c.weight,0);}
+function updateLevel(question){const node=$('level-'+question.key),value=scores[question.key];node.textContent=value===undefined?'เลือกคะแนน 0–4 สำหรับข้อนี้':value+' · '+question.levels[value];node.classList.toggle('chosen',value!==undefined);}
+function totalScore(){return defense().criteria.reduce((sum,c)=>sum+groupPoints(c),0);}
 function updateTotal(){
-  const criteria=defense().criteria,count=criteria.filter(c=>Number.isInteger(scores[c.key])).length;
-  $('total').textContent=totalScore().toFixed(2);$('completion').textContent='ให้คะแนนแล้ว '+count+' / '+criteria.length+' เกณฑ์';$('scoreProgress').value=count;
-  $('scoreBreakdown').replaceChildren();criteria.forEach((c,i)=>{const row=el('div','breakdown-row');row.append(el('span','', 'เกณฑ์ '+(i+1)),el('strong','',scores[c.key]===undefined?'— / '+c.weight:(scores[c.key]/4*c.weight).toFixed(2)+' / '+c.weight));$('scoreBreakdown').append(row);});
-  $('reviewScore').disabled=busy||count!==criteria.length;
+  const questions=defenseQuestions(),count=questions.filter(q=>Number.isInteger(scores[q.key])).length;
+  $('total').textContent=totalScore().toFixed(2);$('completion').textContent='ตอบแล้ว '+count+' / '+questions.length+' ข้อย่อย';$('scoreProgress').max=questions.length;$('scoreProgress').value=count;
+  $('scoreBreakdown').replaceChildren();defense().criteria.forEach((c,i)=>{
+    const answered=c.questions.filter(q=>Number.isInteger(scores[q.key])).length;
+    const row=el('button','breakdown-row jump-group');row.type='button';row.append(el('span','','ด้าน '+(i+1)+' · '+answered+'/'+c.questions.length+' ข้อ'),el('strong','',groupPoints(c).toFixed(2)+' / '+c.weight));row.addEventListener('click',()=>revealGroup(c.key));$('scoreBreakdown').append(row);
+    const progress=$('group-progress-'+c.key);if(progress){progress.textContent=answered+'/'+c.questions.length+' ข้อ';progress.className='badge '+(answered===c.questions.length?'sage':'neutral');}
+    const next=document.querySelector('[data-next-group="'+c.key+'"]');if(next)next.disabled=i===defense().criteria.length-1?count!==questions.length:answered!==c.questions.length;
+  });
+  $('reviewScore').disabled=busy||count!==questions.length;
 }
 $('scoreForm').addEventListener('submit',event=>{
   event.preventDefault();if($('reviewScore').disabled||!selectedStudent||busy)return;
   $('reviewStudent').textContent=selectedStudent.name+' · '+selectedStudent.id;
-  $('reviewDetails').replaceChildren();defense().criteria.forEach((c,i)=>{const row=el('div','review-row');row.append(el('span','',(i+1)+'. '+c.label),el('strong','',(scores[c.key]/4*c.weight).toFixed(2)+' / '+c.weight));$('reviewDetails').append(row);});
+  $('reviewDetails').replaceChildren();defense().criteria.forEach((c,i)=>{
+    const section=el('section','review-group'),heading=el('div','review-group-title');heading.append(el('strong','',(i+1)+'. '+c.label),el('strong','',groupPoints(c).toFixed(2)+' / '+c.weight));section.append(heading);
+    c.questions.forEach((q,idx)=>{const row=el('div','review-row'),label=el('div');label.append(el('span','',(i+1)+'.'+(idx+1)+' '+q.label),el('small','helper','ระดับ '+scores[q.key]+'/4'));row.append(label,el('strong','',(scores[q.key]/4*q.weight).toFixed(2)+' / '+q.weight));section.append(row);});$('reviewDetails').append(section);
+  });
   $('reviewTotal').textContent=totalScore().toFixed(2)+' / 20';$('reviewUpdateNotice').textContent=ownRecord(selectedStudent.id)?'คุณกำลังอัปเดตคะแนนเดิมของตนเอง ระบบจะไม่เพิ่มรายการซ้ำ':'ผู้ประเมิน: '+evaluator.name;
   $('saveError').hidden=true;$('reviewDialog').showModal();
 });
@@ -231,11 +263,11 @@ $('reviewDialog').addEventListener('cancel',event=>{if(busy)event.preventDefault
 $('confirmSave').addEventListener('click',async()=>{
   if(busy||!selectedStudent)return;busy=true;const student=selectedStudent,payloadScores={...scores};$('confirmSave').disabled=true;$('confirmSave').textContent='กำลังบันทึก…';$('backToGrade').disabled=true;$('closeReview').disabled=true;$('saveError').hidden=true;
   try{
-    const response=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({assessment:'defense',idToken:token,studentId:student.id,scores:payloadScores})});
+    const response=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({assessment:'defense',idToken:token,studentId:student.id,rubricVersion:defense().rubricVersion,questionScores:payloadScores})});
     if(!response.ok)throw new Error('เชื่อมต่อระบบไม่สำเร็จ');const result=await response.json();
     if(result.status==='unauthorized'){logout(true);return;}
     if(!['created','updated'].includes(result.status))throw new Error(result.message||'บันทึกไม่สำเร็จ');
-    records=records.filter(r=>!(r.assessment==='defense'&&r.studentId===student.id));records.push({assessment:'defense',studentId:student.id,scores:payloadScores,total:result.total,updatedAt:new Date().toISOString()});
+    records=records.filter(r=>!(r.assessment==='defense'&&r.studentId===student.id));records.push({assessment:'defense',studentId:student.id,scores:result.criterionScores || criterionRawScores(payloadScores),questionScores:payloadScores,rubricVersion:result.rubricVersion || defense().rubricVersion,total:result.total,updatedAt:new Date().toISOString()});
     scores={};originalScores={};selectedStudent=null;$('reviewDialog').close();$('gradeContent').hidden=true;$('saveSuccess').hidden=false;
     $('savedStudent').textContent=student.name+' · '+student.id;$('savedTotal').textContent=Number(result.total).toFixed(2);
     $('nextStudent').textContent=pending().length?'ประเมินคนถัดไป →':'กลับภาพรวมงานของฉัน';renderAll();window.scrollTo({top:0,behavior:'instant'});
@@ -246,11 +278,15 @@ $('nextStudent').addEventListener('click',()=>{const next=pending()[0];if(next)o
 function renderHistory(){
   const section=$('historySection').value,query=$('historySearch').value.trim().toLowerCase(),assessment=assessments.find(a=>a.id===section);
   const list=records.filter(r=>{const s=students.find(s=>s.id===r.studentId);return r.assessment===section&&s&&(s.name+s.id).toLowerCase().includes(query);}).sort((a,b)=>new Date(b.updatedAt)-new Date(a.updatedAt));
-  $('historyRows').replaceChildren();list.forEach(r=>{const s=students.find(s=>s.id===r.studentId),tr=el('tr'),name=el('td');name.append(studentInfoNode(s,true));const type=el('td');type.append(el('span','badge neutral',assessment.label));const score=el('td','table-score',Number(r.total).toFixed(2)+' / '+assessment.max),date=el('td','date-cell',dateLabel(r.updatedAt)),action=el('td');if(section==='defense')action.append(actionButton(s));else action.append(el('span','helper','ปิดรับคะแนนแล้ว'));tr.append(name,type,score,date,action);$('historyRows').append(tr);});$('historyEmpty').hidden=!!list.length;
+  $('historyRows').replaceChildren();list.forEach(r=>{const s=students.find(s=>s.id===r.studentId),tr=el('tr'),name=el('td');name.append(studentInfoNode(s,true));const type=el('td');type.append(el('span','badge neutral',assessment.label));if(section==='defense')type.append(el('small','helper',completeQuestionRecord(r)?'15 ข้อย่อย':'แบบเดิม 5 ด้าน'));const score=el('td','table-score',Number(r.total).toFixed(2)+' / '+assessment.max),date=el('td','date-cell',dateLabel(r.updatedAt)),action=el('td');if(section==='defense')action.append(actionButton(s));else action.append(el('span','helper','ปิดรับคะแนนแล้ว'));tr.append(name,type,score,date,action);$('historyRows').append(tr);});$('historyEmpty').hidden=!!list.length;
 }
 $('historySearch').addEventListener('input',renderHistory);$('historySection').addEventListener('change',renderHistory);
 function renderGuide(){
-  $('guideCriteria').replaceChildren();defense().criteria.forEach((c,index)=>{const detail=el('details','card guide-criterion'),summary=el('summary');summary.append(el('span','',(index+1)+'. '+c.label),el('span','badge neutral',c.weight+' คะแนน'));const meta=el('p','helper',c.mapping+' · '+c.evidence),list=el('ol','guide-levels');list.start=0;c.levels.forEach((level,i)=>{const li=el('li');li.append(el('strong','',SCALE[i]),el('p','',level));list.append(li);});detail.append(summary,meta,list);$('guideCriteria').append(detail);});
+  $('guideCriteria').replaceChildren();defense().criteria.forEach((c,index)=>{
+    const detail=el('details','card guide-criterion'),summary=el('summary');summary.append(el('span','',(index+1)+'. '+c.label),el('span','badge neutral',c.questions.length+' ข้อ · '+c.weight+' คะแนน'));
+    detail.append(summary,el('p','helper',c.mapping+' · '+c.evidence));
+    c.questions.forEach((q,qIndex)=>{const item=el('details','guide-question'),heading=el('summary');heading.append(el('span','',(index+1)+'.'+(qIndex+1)+' '+q.label),el('span','question-weight',q.weight+' คะแนน'));const prompt=el('p','interview-prompt','คำถามเสนอแนะ: '+q.prompt),list=el('ol','guide-levels');list.start=0;q.levels.forEach((level,i)=>{const li=el('li');li.append(el('strong','',SCALE[i]),el('p','',level));list.append(li);});item.append(heading,prompt,list);detail.append(item);});$('guideCriteria').append(detail);
+  });
 }
 window.addEventListener('beforeunload',event=>{if(busy||dirty()){event.preventDefault();event.returnValue='';}});
 function initializeGoogle(){

@@ -35,11 +35,236 @@ const DEFENSE_CRITERIA = [
   { key: 'c4', label: 'ความรับผิดชอบและความซื่อสัตย์', weight: 2, mapping: 'CLO4 → PLO6', evidence: 'บทบาทรายบุคคล หลักฐานการลงมือทำ และการรายงานข้อจำกัดตามจริง (หลักฐานในบริบทโครงงาน)', levels: ['ไม่มีหลักฐานหรืออธิบายงานที่รับผิดชอบไม่ได้', 'บทบาทไม่ชัด อธิบายงานได้จำกัด หลักฐานน้อย', 'ระบุบทบาทได้ แต่หลักฐานหรือผลงานยังไม่ครบ', 'อธิบายบทบาทและงานได้ มีหลักฐานเป็นส่วนใหญ่', 'บทบาทชัด มีหลักฐานสอดคล้องกับงาน เปิดเผยข้อจำกัดตามจริง'] },
   { key: 'c5', label: 'การสื่อสาร การทำงานร่วมกัน และจริยธรรม IT/AI', weight: 4, mapping: 'CLO5 → PLO4, PLO5', evidence: 'นำเสนอ ตอบคำถาม ประสานงาน อ้างอิง และเปิดเผย/ตรวจสอบการใช้ AI โดยไม่หักคะแนนเพียงเพราะใช้ AI', levels: ['ไม่มีหลักฐานเพียงพอสำหรับประเมิน', 'สื่อสารไม่ชัด ตอบได้น้อย ขาดประเด็นการทำงานร่วมกันหรือจริยธรรม', 'สื่อสารและอธิบายการทำงานร่วมกันกับจริยธรรมได้บางส่วน', 'สื่อสารดี มีหลักฐานทำงานร่วมกันและคำนึงถึงจริยธรรม ขาดเล็กน้อย', 'นำเสนอเป็นลำดับ ตอบมีเหตุผล ประสานงาน อ้างอิงและใช้ IT/AI อย่างรับผิดชอบครบถ้วน'] }
 ];
+const DEFENSE_RUBRIC_VERSION = 'defense-v2-15';
+const DEFENSE_QUESTIONS = {
+  "c1": [
+    {
+      "key": "c1_q1",
+      "label": "ความครบถ้วนของฟังก์ชันหลัก",
+      "weight": 2,
+      "evidence": "สาธิตกระบวนการทำงานหลักตั้งแต่เริ่มจนได้ผลลัพธ์",
+      "prompt": "ขอให้สาธิตฟังก์ชันหลักตามวัตถุประสงค์ของโครงงาน",
+      "levels": [
+        "ไม่สามารถสาธิตฟังก์ชันหลักได้",
+        "สาธิตได้เพียงเล็กน้อย ฟังก์ชันหลักส่วนใหญ่ยังไม่ทำงาน",
+        "ฟังก์ชันหลักทำงานได้บางส่วน ยังมีส่วนสำคัญไม่ครบ",
+        "ฟังก์ชันหลักทำงานได้เกือบครบ มีข้อบกพร่องเล็กน้อย",
+        "ฟังก์ชันหลักครบและทำงานต่อเนื่องได้จริง"
+      ]
+    },
+    {
+      "key": "c1_q2",
+      "label": "ความถูกต้องของข้อมูลและผลลัพธ์",
+      "weight": 2,
+      "evidence": "ใช้กรณีตัวอย่างตรวจข้อมูลเข้า การประมวลผล และผลลัพธ์",
+      "prompt": "เมื่อเปลี่ยนข้อมูลนำเข้า ผลลัพธ์ถูกต้องอย่างไร และตรวจสอบด้วยวิธีใด",
+      "levels": [
+        "ไม่มีหลักฐานยืนยันความถูกต้องของผลลัพธ์",
+        "ผลลัพธ์ผิดพลาดบ่อย และอธิบายวิธีตรวจสอบไม่ได้",
+        "กรณีทั่วไปให้ผลถูกต้องบางส่วน แต่ยังพบข้อผิดพลาดสำคัญ",
+        "กรณีหลักให้ผลถูกต้อง มีหลักฐานตรวจสอบ ขาดกรณีย่อยเล็กน้อย",
+        "ผลลัพธ์ถูกต้องตามกฎของงาน มีหลักฐานทดสอบทั้งกรณีปกติและกรณีขอบเขต"
+      ]
+    },
+    {
+      "key": "c1_q3",
+      "label": "การแก้ปัญหาได้ตรงบริบทของโครงงาน",
+      "weight": 2,
+      "evidence": "เปรียบเทียบปัญหาเดิมกับประโยชน์ที่ระบบทำได้จริง",
+      "prompt": "ระบบช่วยแก้ปัญหาเดิมของใคร และมีหลักฐานใดแสดงว่าแก้ได้",
+      "levels": [
+        "ไม่สามารถเชื่อมโยงระบบกับปัญหาที่กำหนดได้",
+        "อธิบายปัญหาได้ แต่ผลงานยังไม่ช่วยแก้ปัญหาหลัก",
+        "แก้ปัญหาได้บางส่วน หลักฐานประโยชน์ยังจำกัด",
+        "แก้ปัญหาหลักได้เหมาะกับบริบท มีตัวอย่างสนับสนุน",
+        "แก้ปัญหาหลักได้ชัดเจน พร้อมหลักฐานเปรียบเทียบหรือผลใช้งานที่ตรวจสอบได้"
+      ]
+    }
+  ],
+  "c2": [
+    {
+      "key": "c2_q1",
+      "label": "เหตุผลในการเลือกเทคโนโลยี",
+      "weight": 1,
+      "evidence": "พิจารณาความเหมาะสม ข้อจำกัด และทางเลือกอื่น",
+      "prompt": "เหตุใดจึงเลือกเทคโนโลยีนี้ และต่างจากทางเลือกอื่นอย่างไร",
+      "levels": [
+        "ไม่สามารถอธิบายเทคโนโลยีที่ใช้ได้",
+        "ระบุเครื่องมือได้ แต่ให้เหตุผลเชื่อมโยงกับงานไม่ได้",
+        "อธิบายความเหมาะสมได้บางส่วน ยังไม่เห็นข้อจำกัด",
+        "ให้เหตุผลสอดคล้องกับงานและอธิบายข้อจำกัดสำคัญได้",
+        "เปรียบเทียบทางเลือกและข้อแลกเปลี่ยนได้ชัด เลือกเหมาะกับบริบทและทรัพยากร"
+      ]
+    },
+    {
+      "key": "c2_q2",
+      "label": "การออกแบบฐานข้อมูลและการจัดเก็บข้อมูล",
+      "weight": 1,
+      "evidence": "ดูโครงสร้างข้อมูล ความสัมพันธ์ ความซ้ำซ้อน และรูปแบบการใช้งาน",
+      "prompt": "ข้อมูลหลักสัมพันธ์กันอย่างไร และออกแบบการจัดเก็บให้เหมาะกับการใช้งานอย่างไร",
+      "levels": [
+        "อธิบายโครงสร้างและวิธีจัดเก็บข้อมูลไม่ได้",
+        "โครงสร้างข้อมูลมีข้อบกพร่องสำคัญ ไม่สอดคล้องกับการใช้งาน",
+        "จัดเก็บและใช้งานได้ แต่ความสัมพันธ์หรือความซ้ำซ้อนยังมีปัญหา",
+        "โครงสร้างเหมาะกับงาน อธิบายความสัมพันธ์และการเข้าถึงข้อมูลได้",
+        "ออกแบบข้อมูลเป็นระบบ เหมาะกับชนิดข้อมูลและการใช้งาน พร้อมเหตุผลและตัวอย่างตรวจสอบได้"
+      ]
+    },
+    {
+      "key": "c2_q3",
+      "label": "โครงสร้างโปรแกรมและการบำรุงรักษา",
+      "weight": 1,
+      "evidence": "ดูการแบ่งส่วนงาน ความชัดเจนของโค้ด และการจัดการข้อผิดพลาด",
+      "prompt": "หากต้องเพิ่มหรือแก้ฟังก์ชันหนึ่ง จะต้องแก้ส่วนใดและกระทบส่วนอื่นอย่างไร",
+      "levels": [
+        "ไม่สามารถอธิบายโครงสร้างโปรแกรมได้",
+        "โค้ดเชื่อมโยงกันสับสน อธิบายเส้นทางการทำงานได้น้อย",
+        "แบ่งส่วนงานได้บางส่วน แต่ยังแก้ไขหรือดูแลได้ยาก",
+        "โครงสร้างชัดพอเหมาะ แบ่งหน้าที่และอธิบายจุดแก้ไขได้",
+        "โครงสร้างเป็นระบบ ลดความซ้ำซ้อน อธิบายและสาธิตการแก้ไขหรือจัดการข้อผิดพลาดได้"
+      ]
+    }
+  ],
+  "c3": [
+    {
+      "key": "c3_q1",
+      "label": "ความสอดคล้องกับความต้องการผู้ใช้",
+      "weight": 2,
+      "evidence": "เชื่อมความต้องการที่ระบุไว้กับฟังก์ชันและผลทดสอบ",
+      "prompt": "ยกตัวอย่างความต้องการสำคัญของผู้ใช้ แล้วชี้ว่าระบบตอบสนองตรงส่วนใด",
+      "levels": [
+        "ไม่มีหลักฐานเชื่อมโยงผลงานกับความต้องการผู้ใช้",
+        "ระบุความต้องการได้ แต่ผลงานไม่ตอบโจทย์สำคัญ",
+        "ตอบความต้องการได้บางส่วน หลักฐานการตรวจรับยังจำกัด",
+        "ตอบความต้องการหลักได้ มีผลตรวจสอบสนับสนุนเป็นส่วนใหญ่",
+        "เชื่อมความต้องการหลักกับฟังก์ชันและหลักฐานตรวจรับได้ครบและชัดเจน"
+      ]
+    },
+    {
+      "key": "c3_q2",
+      "label": "การบูรณาการความรู้และการทดสอบระบบ",
+      "weight": 2,
+      "evidence": "อธิบายการเชื่อมส่วนประกอบ วิธีแก้ปัญหา และผลทดสอบ",
+      "prompt": "ส่วนประกอบของระบบทำงานร่วมกันอย่างไร และทดสอบเส้นทางการใช้งานจริงอย่างไร",
+      "levels": [
+        "ไม่สามารถอธิบายการเชื่อมส่วนประกอบ และไม่มีหลักฐานการทดสอบ",
+        "ส่วนประกอบยังทำงานร่วมกันไม่ได้ มีหลักฐานทดสอบน้อย",
+        "บูรณาการได้บางส่วน ทดสอบเฉพาะกรณีทั่วไปอย่างจำกัด",
+        "ส่วนประกอบทำงานร่วมกันได้ มีผลทดสอบกระบวนการหลัก",
+        "บูรณาการความรู้ได้เป็นระบบ มีผลทดสอบกรณีหลักและกรณีผิดพลาด พร้อมอธิบายการแก้ปัญหา"
+      ]
+    },
+    {
+      "key": "c3_q3",
+      "label": "ความปลอดภัยและการปกป้องข้อมูล",
+      "weight": 1,
+      "evidence": "ตรวจสิทธิ์ผู้ใช้ การตรวจข้อมูล และมาตรการที่เหมาะกับความเสี่ยงของงาน",
+      "prompt": "ข้อมูลใดต้องปกป้อง และระบบป้องกันการเข้าถึงหรือแก้ไขโดยไม่มีสิทธิ์อย่างไร",
+      "levels": [
+        "ไม่ระบุความเสี่ยงหรือไม่มีมาตรการปกป้องข้อมูลที่จำเป็น",
+        "ทราบความเสี่ยงบางส่วน แต่ยังมีช่องโหว่สำคัญที่ไม่ได้จัดการ",
+        "มีมาตรการพื้นฐาน แต่หลักฐานตรวจสอบหรือความครอบคลุมยังไม่พอ",
+        "มีมาตรการเหมาะกับความเสี่ยงหลัก และแสดงหลักฐานตรวจสอบได้",
+        "ระบุความเสี่ยงและจัดการอย่างเหมาะสม พร้อมทดสอบการเข้าถึงหรือใช้งานผิดเงื่อนไข"
+      ]
+    }
+  ],
+  "c4": [
+    {
+      "key": "c4_q1",
+      "label": "หลักฐานการทำงานตามบทบาทที่รับผิดชอบ",
+      "weight": 1,
+      "evidence": "พิจารณาผลงานรายบุคคล บันทึกงาน หรือประวัติการพัฒนา",
+      "prompt": "ส่วนใดเป็นงานที่คุณลงมือทำเอง และมีหลักฐานการพัฒนาใดประกอบ",
+      "levels": [
+        "ไม่สามารถระบุหรือแสดงหลักฐานงานของตนเองได้",
+        "ระบุบทบาทไม่ชัด อธิบายผลงานตนเองได้จำกัด",
+        "ระบุบทบาทและแสดงผลงานได้บางส่วน แต่หลักฐานยังไม่ครบ",
+        "อธิบายงานที่รับผิดชอบได้ชัด มีหลักฐานสอดคล้องเป็นส่วนใหญ่",
+        "บทบาทชัดเจน มีหลักฐานต่อเนื่อง และอธิบายรายละเอียดงานที่ลงมือทำได้ครบ"
+      ]
+    },
+    {
+      "key": "c4_q2",
+      "label": "ความรับผิดชอบและการรายงานผลงานตามจริง",
+      "weight": 1,
+      "evidence": "เทียบแผนกับผลงาน และดูการเปิดเผยข้อจำกัดหรือส่วนที่ยังไม่เสร็จ",
+      "prompt": "งานใดทำได้ตามแผน งานใดยังไม่สำเร็จ และจัดการปัญหาอย่างไร",
+      "levels": [
+        "ไม่มีข้อมูลหรือหลักฐานเพียงพอประเมินความรับผิดชอบ",
+        "สถานะงานไม่ชัด ไม่สามารถอธิบายส่วนที่ยังขาดได้",
+        "รายงานสถานะและข้อจำกัดได้บางส่วน หลักฐานหรือแนวทางติดตามยังไม่ครบ",
+        "รายงานสถานะตามหลักฐาน เปิดเผยข้อจำกัดและอธิบายการจัดการงานได้",
+        "รับผิดชอบงานตามแผนหรืออธิบายการปรับแผนด้วยหลักฐาน รายงานข้อจำกัดและแหล่งที่มาตามจริง"
+      ]
+    }
+  ],
+  "c5": [
+    {
+      "key": "c5_q1",
+      "label": "ความชัดเจนของการนำเสนอ",
+      "weight": 1,
+      "evidence": "การเรียงลำดับเนื้อหา สื่อประกอบ และการใช้เวลา",
+      "prompt": "อธิบายปัญหา วิธีดำเนินงาน และผลลัพธ์สำคัญของโครงงานให้กระชับ",
+      "levels": [
+        "ไม่สามารถสื่อสารสาระสำคัญของโครงงานได้",
+        "เนื้อหาสับสน ขาดสาระสำคัญหลายส่วน",
+        "สื่อสารเข้าใจได้บางส่วน แต่ลำดับหรือสื่อยังไม่ชัด",
+        "นำเสนอเป็นลำดับ สื่อเหมาะสม และสื่อสารสาระสำคัญได้ชัด",
+        "นำเสนอกระชับเป็นระบบ ใช้สื่อและเวลาเหมาะสม เชื่อมปัญหา วิธีทำ และผลลัพธ์ได้ครบ"
+      ]
+    },
+    {
+      "key": "c5_q2",
+      "label": "การตอบข้อซักถามและอธิบายเหตุผล",
+      "weight": 1,
+      "evidence": "ความเข้าใจงานของตน การใช้หลักฐาน และการยอมรับข้อจำกัด",
+      "prompt": "เมื่อกรรมการเสนอข้อโต้แย้ง คุณอธิบายทางเลือกและเหตุผลโดยใช้หลักฐานได้อย่างไร",
+      "levels": [
+        "ตอบคำถามพื้นฐานเกี่ยวกับงานตนเองไม่ได้",
+        "ตอบได้จำกัดและไม่สามารถอธิบายเหตุผลได้",
+        "ตอบได้บางประเด็น แต่เหตุผลหรือหลักฐานยังไม่เพียงพอ",
+        "ตอบคำถามหลักได้ตรงประเด็น มีเหตุผล และยอมรับข้อจำกัด",
+        "ตอบได้ชัดและลึกตามบริบท ใช้หลักฐานสนับสนุน วิเคราะห์ทางเลือกและข้อจำกัดได้"
+      ]
+    },
+    {
+      "key": "c5_q3",
+      "label": "การทำงานร่วมกันและการพัฒนาตนเอง",
+      "weight": 1,
+      "evidence": "ดูการประสานงานกับทีม ผู้ใช้ หรือที่ปรึกษา และการนำข้อเสนอแนะไปปรับปรุง",
+      "prompt": "คุณประสานงานกับใครบ้าง และนำข้อเสนอแนะไปปรับปรุงผลงานหรือทักษะอย่างไร",
+      "levels": [
+        "ไม่มีหลักฐานการประสานงานหรือปรับปรุงจากข้อเสนอแนะ",
+        "อธิบายการประสานงานได้จำกัด ยังไม่เห็นการนำข้อเสนอแนะไปใช้",
+        "มีการประสานงานและปรับปรุงงานบางส่วน แต่หลักฐานยังจำกัด",
+        "ประสานงานตามบทบาทได้เหมาะสม และมีหลักฐานปรับปรุงตามข้อเสนอแนะ",
+        "ทำงานกับผู้เกี่ยวข้องอย่างรับผิดชอบ สื่อสารเหมาะสม และแสดงพัฒนาการจากข้อเสนอแนะได้ชัดเจน"
+      ]
+    },
+    {
+      "key": "c5_q4",
+      "label": "จริยธรรมการใช้ข้อมูล แหล่งที่มา และ AI",
+      "weight": 1,
+      "evidence": "การอ้างอิง สิทธิ์การใช้ข้อมูล การเปิดเผยเครื่องมือ และการตรวจสอบผลงาน",
+      "prompt": "ใช้ข้อมูล โค้ด หรือ AI จากแหล่งใดบ้าง และตรวจสอบสิทธิ์ ความถูกต้อง และความเป็นส่วนตัวอย่างไร",
+      "levels": [
+        "ไม่มีข้อมูลหรือหลักฐานเพียงพอประเมินการใช้ทรัพยากรอย่างรับผิดชอบ",
+        "อธิบายแหล่งที่มาหรือการจัดการข้อมูลได้จำกัด ขาดการตรวจสอบที่จำเป็น",
+        "ระบุแหล่งที่มาและแนวปฏิบัติได้บางส่วน แต่ยังมีประเด็นสำคัญไม่ครบ",
+        "อ้างอิงและใช้ทรัพยากรเหมาะสม เปิดเผยการใช้เครื่องมือและตรวจสอบผลงานเป็นส่วนใหญ่",
+        "แสดงที่มาและสิทธิ์การใช้ทรัพยากรชัดเจน ปกป้องข้อมูล เปิดเผยและตรวจสอบการใช้ AI ตามจริง หรืออธิบายได้ว่าไม่ได้ใช้"
+      ]
+    }
+  ]
+};
+DEFENSE_CRITERIA.forEach(function(c) { c.questions = DEFENSE_QUESTIONS[c.key]; });
+
 const ASSESSMENTS = {
   proposal: { id: 'proposal', label: 'หัวข้อโครงงาน', max: 10, status: 'completed', sheet: 'Scores', criteria: CRITERIA },
   advisor: { id: 'advisor', label: 'อาจารย์ที่ปรึกษา', max: 50, status: 'planned', criteria: [] },
   progress: { id: 'progress', label: 'รายงานความก้าวหน้า', max: 20, status: 'planned', criteria: [] },
-  defense: { id: 'defense', label: 'สอบวิพากษ์', max: 20, status: 'open', sheet: 'DefenseScores', criteria: DEFENSE_CRITERIA }
+  defense: { id: 'defense', label: 'สอบวิพากษ์', max: 20, status: 'open', sheet: 'DefenseScores', criteria: DEFENSE_CRITERIA, rubricVersion: DEFENSE_RUBRIC_VERSION }
 };
 
 function getAssessment(id) {
@@ -76,7 +301,7 @@ function doGet(e) {
   if (action === 'getCriteria') {
     return jsonOutput({ assessments: Object.keys(ASSESSMENTS).map(function (key) {
       const a = ASSESSMENTS[key];
-      return { id: a.id, label: a.label, max: a.max, status: a.status, criteria: a.criteria };
+      return { id: a.id, label: a.label, max: a.max, status: a.status, criteria: a.criteria, rubricVersion: a.rubricVersion };
     }), scaleLabels: SCALE_LABELS });
   }
   if (action === 'getMyWorkspace') {
@@ -275,8 +500,21 @@ function getMyWorkspace(idToken) {
       if (!matches) continue;
       const scores = {};
       assessment.criteria.forEach(function(c, idx) { scores[c.key] = Number(r[6 + idx]); });
-      own[id] = { assessment: section, studentId: id, scores: scores, total: Number(r[11]),
+      const record = { assessment: section, studentId: id, scores: scores, total: Number(r[11]),
         updatedAt: r[0] instanceof Date ? r[0].toISOString() : String(r[0] || '') };
+      if (section === 'defense') {
+        record.rubricVersion = r[13] || 'defense-v1';
+        record.questionScores = null;
+        if (r[13] === DEFENSE_RUBRIC_VERSION) {
+          const questions = getDefenseQuestions_();
+          const complete = questions.every(function(q, idx) { const raw = r[14 + idx]; return typeof raw === 'number' && Number.isInteger(raw) && raw >= 0 && raw <= 4; });
+          if (complete) {
+            record.questionScores = {};
+            questions.forEach(function(q, idx) { record.questionScores[q.key] = r[14 + idx]; });
+          }
+        }
+      }
+      own[id] = record;
     }
     Object.keys(own).forEach(function(id) { records.push(own[id]); });
   });
@@ -290,13 +528,13 @@ function getMyWorkspace(idToken) {
  *
  * payload = {
  *   studentId, studentName, room, term, evaluatorName,
- *   scores: { c1: 0-4, c2: 0-4, c3: 0-4, c4: 0-4, c5: 0-4 }
+ *   rubricVersion, questionScores: { c1_q1: 0-4, ... รวม 15 ข้อ }
  * }
  *
  * ยืนยัน Google ID token และอ่านตัวตน/ข้อมูลนิสิตจากชีทฝั่งเซิร์ฟเวอร์
  */
 function submitScore(payload) {
-  if (!payload || !payload.scores) throw new Error('ข้อมูลคะแนนไม่ครบ');
+  if (!payload) throw new Error('ข้อมูลคะแนนไม่ครบ');
   const auth = getMyEvaluatorInfo(payload.idToken);
   if (!auth.ok) return { status: 'unauthorized', message: 'กรุณาเข้าสู่ระบบด้วยอีเมลกรรมการใน Committees', reason: auth.reason };
   const assessment = getAssessment(payload.assessment);
@@ -306,22 +544,19 @@ function submitScore(payload) {
   if (!auth.assignments.some(function (a) { return a.term === student.term && a.room === student.room; })) {
     throw new Error('นิสิตไม่อยู่ในห้องสอบ/แผนการเรียนที่ได้รับมอบหมาย');
   }
-  let total = 0;
-  const rawValues = assessment.criteria.map(function (c) {
-    const raw = payload.scores[c.key];
-    if (typeof raw !== 'number' || !Number.isInteger(raw) || raw < 0 || raw > 4) throw new Error('คะแนนต้องเป็นจำนวนเต็ม 0–4 ครบทุกเกณฑ์');
-    total += raw / 4 * c.weight;
-    return raw;
-  });
-  total = Math.round(total * 100) / 100;
+  if (payload.rubricVersion !== DEFENSE_RUBRIC_VERSION) throw new Error('เกณฑ์สอบวิพากษ์ปรับเป็น 15 ข้อย่อยแล้ว กรุณารีเฟรชหน้าเว็บก่อนให้คะแนน');
+  const calculated = calculateDefenseScores_(payload.questionScores);
+  const total = calculated.total, rawValues = calculated.rawValues;
   const lock = LockService.getScriptLock();
   lock.waitLock(30000);
   try {
     const sheet = getSS().getSheetByName(assessment.sheet);
     if (!sheet) throw new Error('ยังไม่ได้เตรียมชีทสอบวิพากษ์ กรุณารัน setupDefenseSheets');
     const data = sheet.getDataRange().getValues();
+    ensureDefenseQuestionColumns_(sheet, data[0] || [], data);
     const newRow = [new Date(), student.id, student.name, student.room, student.term, auth.name]
-      .concat(rawValues).concat([total, auth.email]);
+      .concat(rawValues).concat([total, auth.email, DEFENSE_RUBRIC_VERSION])
+      .concat(getDefenseQuestions_().map(function(q) { return payload.questionScores[q.key]; }));
     let existingRow = -1;
     for (let i = 1; i < data.length; i++) {
       if (String(data[i][1]).trim() === String(student.id).trim() &&
@@ -333,10 +568,44 @@ function submitScore(payload) {
     if (existingRow > 0) sheet.getRange(existingRow, 1, 1, newRow.length).setValues([newRow]);
     else sheet.appendRow(newRow);
     SpreadsheetApp.flush();
-    return { status: existingRow > 0 ? 'updated' : 'created', total: total, assessment: assessment.id };
+    return { status: existingRow > 0 ? 'updated' : 'created', total: total, assessment: assessment.id, rubricVersion: DEFENSE_RUBRIC_VERSION, criterionScores: calculated.criterionScores };
   } finally {
     lock.releaseLock();
   }
+}
+
+/** คะแนนย่อยเป็นแหล่งข้อมูลหลัก; G–K ยังคงเป็นคะแนนดิบเทียบเท่า 0–4 ของแต่ละด้าน */
+function getDefenseQuestions_() {
+  return DEFENSE_CRITERIA.reduce(function(all, c) { return all.concat(c.questions); }, []);
+}
+function calculateDefenseScores_(questionScores) {
+  const questions = getDefenseQuestions_();
+  if (!questionScores || Array.isArray(questionScores) || Object.keys(questionScores).length !== questions.length) throw new Error('กรุณาให้คะแนนครบทั้ง 15 ข้อย่อย');
+  questions.forEach(function(q) {
+    const raw = questionScores[q.key];
+    if (typeof raw !== 'number' || !Number.isInteger(raw) || raw < 0 || raw > 4) throw new Error('คะแนนย่อยต้องเป็นจำนวนเต็ม 0–4 ครบทั้ง 15 ข้อ');
+  });
+  let total = 0;
+  const criterionScores = {};
+  const rawValues = DEFENSE_CRITERIA.map(function(c) {
+    const points = c.questions.reduce(function(sum, q) { return sum + questionScores[q.key] / 4 * q.weight; }, 0);
+    total += points;
+    const raw = points / c.weight * 4;
+    criterionScores[c.key] = raw;
+    return raw;
+  });
+  return { total: Math.round(total * 100) / 100, rawValues: rawValues, criterionScores: criterionScores };
+}
+function ensureDefenseQuestionColumns_(sheet, existingHeader, existingRows) {
+  const columns = ['เวอร์ชันเกณฑ์สอบวิพากษ์'].concat(getDefenseQuestions_().map(function(q) { return q.key + ' · ' + q.label + ' (0–4)'; }));
+  columns.forEach(function(label, idx) {
+    const previous = existingHeader[13 + idx];
+    const dataWithoutHeader = !previous && (existingRows || []).slice(1).some(function(row) { const value = row[13 + idx]; return value !== undefined && value !== null && value !== ''; });
+    if ((previous && previous !== label) || dataWithoutHeader) throw new Error('คอลัมน์คะแนนย่อยมีข้อมูลอื่นอยู่ กรุณาให้ผู้ดูแลตรวจสอบก่อนบันทึก');
+  });
+  const required = 13 + columns.length, current = sheet.getMaxColumns();
+  if (current < required) sheet.insertColumnsAfter(current, required - current);
+  if (columns.some(function(label, idx) { return existingHeader[13 + idx] !== label; })) sheet.getRange(1, 14, 1, columns.length).setValues([columns]);
 }
 
 /** เพิ่มเฉพาะชีทใหม่ ไม่ล้างคะแนนหรือรายชื่อเดิม รันซ้ำได้ */

@@ -207,3 +207,47 @@ input, select, textarea, .select-trigger { font-size: 14px; }
 .select-option{transition:background-color var(--motion-fast),color var(--motion-fast)}
 @media(max-width:1100px){#menuToggle{min-width:44px;min-height:44px}.drawer-close{min-width:44px;min-height:44px}}
 @media(max-width:600px){input[type="search"],input[type="text"],input[type="tel"],textarea,.admin-table-filters .search-input{font-size:16px}}
+/* Fifteen scored questions grouped into five collapsible CLO/PLO domains. */
+.rubric-group{padding:0;margin-bottom:18px;scroll-margin-top:88px;overflow:clip}
+.rubric-group-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;list-style:none;margin:0;padding:22px 24px;color:#0f172a}
+.rubric-group-heading::-webkit-details-marker{display:none}
+.rubric-group-title{display:flex;align-items:flex-start;gap:10px;min-width:0}
+.rubric-group-title strong{font-size:15px;line-height:1.8;font-weight:600}
+.rubric-group-meta{display:flex;align-items:center;gap:12px;flex-shrink:0}
+.rubric-group-meta:after{content:'＋';font-size:19px;color:#64748b}
+.rubric-group[open]>.rubric-group-heading{background:#f8fbfd;border-bottom:1px solid #e2e8f0}
+.rubric-group[open]>.rubric-group-heading .rubric-group-meta:after{content:'−'}
+.rubric-group-body{padding:0 24px 24px}
+.rubric-group-intro{padding:20px 0}
+.rubric-group-intro>p{font-size:12px;color:#64748b;line-height:1.9;margin-top:10px}
+.question-card{min-width:0;border:0;border-top:1px solid #edf0f3;margin:0;padding:24px 0}
+.question-card legend{float:left;width:100%;padding:0;display:flex;align-items:flex-start;gap:10px;font-size:14px;font-weight:600;line-height:1.9}
+.question-number{flex-shrink:0;border-radius:5px;background:#f1f5f9;color:#64748b;padding:1px 7px;font-size:11px;margin-top:2px}
+.question-weight{clear:both;display:block;padding-top:8px;font-size:11px;color:#64748b}
+.question-card .criterion-evidence{clear:both;font-size:12px;line-height:1.9;margin:12px 0 16px}
+.question-card .interview-prompt,.interview-prompt{font-size:12px;color:#475569;line-height:1.9;background:#f8fafc;border-radius:6px;padding:12px;margin-top:12px}
+.question-card .selected-level{font-size:12px}
+.question-help summary{font-size:11px}
+.group-next{width:100%;margin-top:4px}
+.jump-group{display:flex;align-items:center;justify-content:space-between;width:100%;background:transparent;border:0;border-bottom:1px solid #f1f5f9;text-align:left;font-family:var(--body);padding:10px 0;color:#64748b}
+.jump-group:hover{color:#047857;background:#f8fdfb}
+.guide-question{border-top:1px solid #e2e8f0;margin-top:18px;padding-top:4px}
+.guide-question>summary{width:100%;display:flex;align-items:baseline;justify-content:space-between;gap:16px;font-size:13px;line-height:1.9}
+.guide-question .question-weight{white-space:nowrap}
+.review-group{margin-top:24px}
+.review-group-title{display:flex;align-items:baseline;justify-content:space-between;gap:16px;background:#f1f5f9;border-radius:7px;padding:12px;font-size:12px}
+.review-group-title strong:last-child{white-space:nowrap;color:#047857}
+.review-row>div{min-width:0}
+.review-row small{display:block;margin-top:5px;font-size:10px;color:#94a3b8}
+@media(max-width:600px){
+.rubric-heading{flex-wrap:wrap;gap:8px}.rubric-heading h2{font-size:16px}.rubric-heading .helper{display:block;margin-left:0;margin-top:4px}
+.rubric-group-heading{padding:18px 16px;flex-wrap:wrap;gap:10px}
+.rubric-group-title{width:100%}.rubric-group-title strong{font-size:14px}
+.rubric-group-meta{padding-left:34px;width:100%;justify-content:flex-start}.rubric-group-meta:after{margin-left:auto}
+.rubric-group-body{padding:0 16px 18px}.rubric-group-intro>p{font-size:11px}
+.question-card legend{font-size:14px;gap:8px}.question-card .criterion-evidence{font-size:12px}
+.question-card .selected-level{font-size:11px}.question-card .scale label>span{font-size:10px}
+.question-help summary{font-size:10px}.group-next{font-size:12px}
+.review-group-title{display:block;line-height:1.9}.review-group-title strong{display:block}.review-group-title strong:last-child{margin-top:4px}
+.guide-question>summary{font-size:12px;gap:12px}.guide-question .question-weight{font-size:10px}
+}

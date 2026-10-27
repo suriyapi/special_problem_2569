@@ -65,6 +65,7 @@ async function login(credential) {
     token = credential; evaluator = identity; storageSet(token);
     $('evaluatorName').textContent = identity.name; $('evaluatorEmail').textContent = identity.email;
     $('userAvatar').textContent = identity.name.replace(/^อาจารย์(?:ดร\.)?/,'').trim().slice(0,1) || 'ก';
+    $('topAvatar').textContent = $('userAvatar').textContent;
     $('loginScreen').hidden = true; $('appShell').hidden = false;
     activeView = location.hash.slice(1) || 'overview';
     await loadWorkspace();
@@ -111,32 +112,67 @@ function actionButton(student, compact = false) {
   button.type = 'button'; button.setAttribute('aria-label',(record?'แก้ไขคะแนน ':'ให้คะแนน ')+student.name); if (compact) button.classList.add('small');
   button.addEventListener('click', () => openStudent(student.id)); return button;
 }
-function previewRow(student, record) {
-  const row = el('div','preview-row'), avatar = el('span','mini-avatar',student.name.slice(0,1)); row.append(avatar,studentInfoNode(student,true));
-  if (record) { row.append(el('strong','preview-score',Number(record.total).toFixed(2)+'/20')); }
-  else row.append(actionButton(student,true));
-  return row;
-}
 function renderOverview() {
   const done = students.length-pending().length, total = students.length, remaining = pending().length;
-  $('welcomeText').textContent = 'สวัสดี '+evaluator.name+' · '+[...new Set(evaluator.assignments.map(a=>'ห้อง '+a.room+' ภาค'+a.term))].join(' / ');
+  const completed = records.filter(r => r.assessment === 'defense' && students.some(s => s.id === r.studentId));
+  const average = completed.length ? completed.reduce((sum,r) => sum + Number(r.total),0)/completed.length : null;
+  const firstName = evaluator.name.replace(/^อาจารย์(?:\s*ดร\.)?\s*/,'').trim().split(/\s+/)[0];
+  $('greetingTitle').textContent = 'สวัสดี, อาจารย์'+firstName;
+  const date = new Intl.DateTimeFormat('th-TH',{timeZone:'Asia/Bangkok',weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date());
+  $('welcomeText').replaceChildren(document.createTextNode(date+' — '),el('span','course-open','สอบวิพากษ์: เปิดประเมิน'));
   $('myStats').replaceChildren();
-  [{label:'นิสิตที่รับผิดชอบ',value:total,unit:'คน',icon:'users',tone:'navy'},{label:'ประเมินแล้ว',value:done,unit:'คน',icon:'check',tone:'sage'},{label:'รอประเมิน',value:remaining,unit:'คน',icon:'clock',tone:'amber'}].forEach(item => {
-    const card = el('div','stat-card');const badge = el('span','stat-icon '+item.tone);badge.innerHTML = icon(item.icon); const text = el('div');text.append(el('span','stat-label',item.label));const number = el('div','stat-value');number.append(el('strong','',item.value),el('span','',item.unit));text.append(number);card.append(badge,text);$('myStats').append(card);
+  const percent = total ? Math.round(done / total * 100) : 0;
+  const roomCount = new Set(students.map(s => s.term+'|'+s.room)).size;
+  [{label:'นิสิตที่รับผิดชอบ',value:total,unit:'คน',icon:'users',tone:'lavender',tag:roomCount+' กลุ่ม',note:'เฉพาะห้องและแผนการเรียนที่ได้รับมอบหมาย'},
+   {label:'ประเมินแล้ว',value:done,unit:'คน',icon:'file',tone:'blue',tag:percent+'%',note:'บันทึกคะแนนสอบวิพากษ์เรียบร้อยแล้ว'},
+   {label:'รอประเมิน',value:remaining,unit:'คน',icon:'clock',tone:'slate',tag:total ? (100-percent)+'%' : '0%',note:'ยังไม่มีคะแนนสอบวิพากษ์จากคุณ'},
+   {label:'คะแนนเฉลี่ยของฉัน',value:average===null?'—':average.toFixed(2),unit:'/ 20',icon:'chart',tone:'mint',tag:'เต็ม 20',note:completed.length?'จากการประเมิน '+completed.length+' คน':'ยังไม่มีคะแนนที่บันทึก'}].forEach(item => {
+    const card=el('div','stat-card');const top=el('div','metric-top'),symbol=el('span','stat-icon '+item.tone);symbol.innerHTML=icon(item.icon);top.append(symbol,el('span','metric-tag',item.tag));
+    const number=el('div','stat-value');number.append(el('strong','',item.value),el('span','',item.unit));card.append(top,el('span','stat-label',item.label),number,el('p','metric-note',item.note));$('myStats').append(card);
   });
   $('focusTitle').textContent = !total ? 'ยังไม่มีรายชื่อนิสิตที่ได้รับมอบหมาย' : remaining ? 'เหลือนิสิตอีก '+remaining+' คนที่รอการประเมิน' : 'ประเมินครบทุกคนแล้ว';
-  $('focusDescription').textContent = !total ? 'ติดต่อผู้ดูแลเพื่อตรวจสอบการมอบหมายห้องสอบและแผนการเรียน' : remaining ? 'เลือกนิสิตจากรายชื่อ แล้วให้คะแนน 5 เกณฑ์ รวม 20 คะแนน' : 'ตรวจคะแนนย้อนหลังหรือแก้ไขได้จากประวัติการประเมิน';
-  $('overviewProgress').max = total || 1; $('overviewProgress').value = done;
-  $('overviewProgressLabel').textContent = done+' / '+total+' คน';
-  $('continueScoring').textContent = remaining ? 'ประเมินคนถัดไป →' : 'ดูประวัติการประเมิน →';
-  $('pendingPreview').replaceChildren(); pending().slice(0,4).forEach(s => $('pendingPreview').append(previewRow(s)));
-  if (!remaining) $('pendingPreview').append(el('p','empty-inline',total ? 'ประเมินครบแล้ว ขอบคุณสำหรับการประเมิน' : 'ยังไม่มีรายชื่อที่ได้รับมอบหมาย'));
-  $('recentPreview').replaceChildren(); const recent = records.filter(r=>r.assessment==='defense').sort((a,b)=>new Date(b.updatedAt)-new Date(a.updatedAt)).slice(0,4);
-  recent.forEach(r => { const s=students.find(s=>s.id===r.studentId);if(s)$('recentPreview').append(previewRow(s,r)); });
-  if(!recent.length)$('recentPreview').append(el('p','empty-inline','ยังไม่มีคะแนนสอบวิพากษ์ที่บันทึก'));
+  $('focusDescription').textContent = !total ? 'ติดต่อผู้ดูแลเพื่อตรวจสอบการมอบหมายห้องสอบ' : 'ข้อมูลเฉพาะคะแนนที่คุณเป็นผู้ประเมิน';
+  $('overviewProgress').max=total||1;$('overviewProgress').value=done;$('overviewProgressLabel').textContent=done+' / '+total+' คน';
+  $('continueScoring').textContent=remaining?'＋ เริ่มประเมิน':'ดูประวัติการประเมิน →';
+  $('exportScores').disabled=!completed.length;
+  renderRoomAnalytics();renderCompletionDonut(done,total);
+  const recent=completed.slice().sort((a,b)=>new Date(b.updatedAt)-new Date(a.updatedAt));
+  const ordered=[...recent.map(r=>students.find(s=>s.id===r.studentId)),...pending()].filter(Boolean).slice(0,5);
+  $('activityRows').replaceChildren();
+  ordered.forEach(student=>{
+    const record=ownRecord(student.id),row=el('tr'),name=el('td'),person=el('div','activity-person');
+    person.append(el('span','mini-avatar avatar-tone-'+students.indexOf(student)%4,student.name.replace(/^(นาย|นางสาว|นาง)/,'').slice(0,1)),studentInfoNode(student,true));name.append(person);
+    const room=el('td');room.append(el('span','room-name',student.room),el('small','','ภาค'+student.term));
+    const timestamp=el('td','activity-date',record?dateLabel(record.updatedAt):'ยังไม่บันทึก');
+    const status=el('td');status.append(el('span','badge '+(record?'sage':'neutral'),record?'ประเมินแล้ว':'รอประเมิน'));
+    const action=el('td');action.append(actionButton(student,true));row.append(name,room,timestamp,status,action);$('activityRows').append(row);
+  });
+  $('activityEmpty').hidden=!!ordered.length;
   $('assessmentPlan').replaceChildren();
   assessments.forEach(a=>{const item=el('div','plan-item '+a.status);const heading=el('div');heading.append(el('span','plan-label',a.label),el('span','badge '+(a.status==='open'?'sage':a.status==='completed'?'neutral':'warning'),a.status==='open'?'เปิดประเมิน':a.status==='completed'?'เก็บคะแนนแล้ว':'ยังไม่เปิด'));const number=el('div','plan-points');number.append(el('strong','',a.max),el('span','','คะแนน'));item.append(heading,number);if(a.status==='open'){const link=el('a','text-link','ไปรายชื่อนิสิต →');link.href='#students';item.append(link);}else item.append(el('span','helper',a.status==='completed'?'ดูคะแนนของคุณได้ในประวัติ':'วางแผนไว้ ยังไม่รับคะแนน'));$('assessmentPlan').append(item);});
 }
+function renderRoomAnalytics() {
+  const chart=$('roomProgressChart');chart.replaceChildren();
+  const groups=new Map();students.forEach(student=>{const key=student.term+'|'+student.room;if(!groups.has(key))groups.set(key,{room:student.room,term:student.term,total:0,done:0});const group=groups.get(key);group.total++;if(ownRecord(student.id))group.done++;});
+  if(!groups.size){chart.append(el('p','empty-inline','ยังไม่มีข้อมูลสำหรับแสดงกราฟ'));return;}
+  const max=Math.max(4,Math.ceil(Math.max(...[...groups.values()].map(group=>group.total))/4)*4);
+  const grid=el('div','chart-grid-lines');for(let i=4;i>=0;i--){const line=el('div');line.append(el('span','',Math.round(max*i/4)));grid.append(line);}chart.append(grid);
+  const columns=el('div','room-columns');
+  groups.forEach(group=>{const column=el('div','room-column'),track=el('div','column-track'),bar=el('div','column-bar');bar.style.height=(group.total/max*100)+'%';bar.setAttribute('role','img');bar.setAttribute('aria-label',group.room+' ภาค'+group.term+' ประเมินแล้ว '+group.done+' จาก '+group.total+' คน');const pendingBar=el('span','column-pending'),doneBar=el('span','column-done');pendingBar.style.height=((group.total-group.done)/group.total*100)+'%';doneBar.style.height=(group.done/group.total*100)+'%';bar.append(pendingBar,doneBar);track.style.setProperty('--bar-height',(group.total/max*100)+'%');const count=el('span','column-count',group.done+'/'+group.total);track.append(count,bar);column.append(track,el('strong','',group.room),el('small','','ภาค'+group.term));columns.append(column);});chart.append(columns);
+}
+function renderCompletionDonut(done,total) {
+  const percent=total?done/total:0,circumference=2*Math.PI*76;
+  $('completionDonut').innerHTML=`<svg viewBox="0 0 200 200" role="img" aria-label="ประเมินแล้ว ${done} จาก ${total} คน"><circle cx="100" cy="100" r="76" fill="none" stroke="${total?'#0f172a':'#e2e8f0'}" stroke-width="21"/><circle cx="100" cy="100" r="76" fill="none" stroke="#059669" stroke-width="21" stroke-dasharray="${percent*circumference} ${circumference}" transform="rotate(-90 100 100)"/></svg>`;
+  const center=el('div','donut-center');center.append(el('strong','',total),el('span','','นิสิตที่รับผิดชอบ'));$('completionDonut').append(center);
+  $('completionLegend').replaceChildren();[{label:'ประเมินแล้ว',value:done,color:'sage-dot'},{label:'รอประเมิน',value:total-done,color:'navy-dot'}].forEach(item=>{const row=el('div'),name=el('span');name.append(el('i','legend-dot '+item.color),document.createTextNode(item.label));row.append(name,el('strong','',(total?(item.color==='sage-dot'?Math.round(percent*100):100-Math.round(percent*100)):0)+'%'),el('small','',item.value+' คน'));$('completionLegend').append(row);});
+}
+$('globalSearchForm').addEventListener('submit',event=>{event.preventDefault();if(!loaded)return;if(!navigate('students'))return;studentFilter='all';$('roomFilter').value='';$('studentSearch').value=$('globalSearch').value;renderStudents();$('studentSearch').focus({preventScroll:true});});
+$('exportScores').addEventListener('click',()=>{
+  const lines=[['รหัสนิสิต','ชื่อ-สกุล','ห้องสอบ','แผนการเรียน','หมวด','คะแนนเต็ม 20','บันทึกล่าสุด']];
+  records.filter(record=>record.assessment==='defense').forEach(record=>{const student=students.find(s=>s.id===record.studentId);if(student)lines.push([student.id,student.name,student.room,student.term,'สอบวิพากษ์',record.total,record.updatedAt]);});
+  const cell=value=>{let text=String(value??'');if(/^[=+@-]/.test(text))text="'"+text;return '"'+text.replaceAll('"','""')+'"';};
+  const csv='\ufeff'+lines.map(row=>row.map(cell).join(',')).join('\r\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const link=el('a');link.href=url;link.download='คะแนนสอบวิพากษ์ของฉัน.csv';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+});
 $('continueScoring').addEventListener('click',()=>{const next=pending()[0];if(next)openStudent(next.id);else navigate('history');});
 function populateRooms() {
   const previous=$('roomFilter').value;$('roomFilter').replaceChildren(new Option('ทุกห้อง / แผนการเรียน',''));

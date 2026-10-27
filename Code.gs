@@ -79,6 +79,9 @@ function doGet(e) {
       return { id: a.id, label: a.label, max: a.max, status: a.status, criteria: a.criteria };
     }), scaleLabels: SCALE_LABELS });
   }
+  if (action === 'getMyWorkspace') {
+    return jsonOutput(getMyWorkspace(e.parameter.idToken));
+  }
   if (action === 'getMyEvaluatorInfo') {
     return jsonOutput(getMyEvaluatorInfo(e.parameter.idToken));
   }
@@ -239,6 +242,46 @@ function getStudentById(studentId) {
     }
   }
   return null; // ไม่พบรหัสนี้
+}
+
+/** ข้อมูลส่วนตัวกรรมการ: เฉพาะนิสิตในห้องที่รับผิดชอบและคะแนนของตนเอง */
+function getMyWorkspace(idToken) {
+  const auth = getMyEvaluatorInfo(idToken);
+  if (!auth.ok) return { status: 'unauthorized', reason: auth.reason };
+  const ss = getSS();
+  const rows = ss.getSheetByName('Students').getDataRange().getValues();
+  const seen = {};
+  const students = [];
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i], id = String(r[0] || '').trim();
+    if (!id || seen[id]) continue;
+    if (!auth.assignments.some(function(a) { return a.term === r[3] && a.room === r[2]; })) continue;
+    seen[id] = true;
+    students.push({ id: id, name: r[1], room: r[2], term: r[3], advisor: r[4], topic: r[5] || '' });
+  }
+  const records = [];
+  ['proposal', 'defense'].forEach(function(section) {
+    const assessment = getAssessment(section), sheet = ss.getSheetByName(assessment.sheet);
+    if (!sheet) return;
+    const data = sheet.getDataRange().getValues();
+    const own = {};
+    for (let i = 1; i < data.length; i++) {
+      const r = data[i], id = String(r[1] || '').trim();
+      if (!seen[id]) continue;
+      const email = String(r[12] || '').trim().toLowerCase();
+      // คะแนนหัวข้อเดิมไม่มีอีเมล จึงจับคู่ชื่อกับบัญชีที่ยืนยันแล้ว
+      const matches = email ? email === auth.email.toLowerCase()
+        : section === 'proposal' && String(r[5] || '').trim() === auth.name;
+      if (!matches) continue;
+      const scores = {};
+      assessment.criteria.forEach(function(c, idx) { scores[c.key] = Number(r[6 + idx]); });
+      own[id] = { assessment: section, studentId: id, scores: scores, total: Number(r[11]),
+        updatedAt: r[0] instanceof Date ? r[0].toISOString() : String(r[0] || '') };
+    }
+    Object.keys(own).forEach(function(id) { records.push(own[id]); });
+  });
+  return { status: 'ok', evaluator: { name: auth.name, email: auth.email, assignments: auth.assignments },
+    students: students, records: records };
 }
 
 /**

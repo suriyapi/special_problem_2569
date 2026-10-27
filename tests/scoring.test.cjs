@@ -49,3 +49,15 @@ test('setupDefenseSheets is repeatable and preserves existing score sheets',()=>
   context.setupDefenseSheets();context.setupDefenseSheets();
   assert.equal(JSON.stringify(sheets),before);assert.match(summaries.DefenseSummary[0][3],/DefenseScores!L:L/);
 });
+test('workspace exposes assigned students and only verified evaluator records',()=>{
+  const {context,sheets,payload}=fixture();context.submitScore(payload);
+  sheets.Students.push(['9999999999','Other room','R2','ปกติ','Advisor','Private topic']);
+  sheets.DefenseScores.push([new Date(),'1234567890','Student','R1','ปกติ','Other teacher',0,0,0,0,0,0,'other@example.com']);
+  sheets.DefenseScores.push([new Date(),'9999999999','Other room','R2','ปกติ','Teacher',4,4,4,4,4,20,'teacher@example.com']);
+  const result=context.getMyWorkspace('valid');assert.equal(result.status,'ok');assert.equal(result.students.length,1);assert.equal(result.students[0].id,'1234567890');assert.equal(result.records.length,2);assert.equal(result.records.find(r=>r.assessment==='defense').total,20);assert.equal(result.records.find(r=>r.assessment==='proposal').total,10);
+  assert.equal(context.getMyWorkspace('bad').status,'unauthorized');
+});
+test('workspace does not use display name to claim another email defense record',()=>{
+  const {context,sheets}=fixture();sheets.DefenseScores.push([new Date(),'1234567890','Student','R1','ปกติ','Teacher',4,4,4,4,4,20,'other@example.com']);
+  assert.equal(context.getMyWorkspace('valid').records.filter(r=>r.assessment==='defense').length,0);
+});

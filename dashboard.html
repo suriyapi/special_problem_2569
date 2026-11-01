@@ -34,7 +34,7 @@
 
     <div id="dashboardContent" style="display:none;">
       <label class="select-label" for="assessmentSelect">ส่วนการประเมิน</label>
-      <select id="assessmentSelect"><option value="defense">สอบวิพากษ์ · 20 คะแนน</option><option value="proposal">หัวข้อโครงงาน · 10 คะแนน</option><option value="advisor">อาจารย์ที่ปรึกษา · 50 คะแนน</option><option disabled>รายงานความก้าวหน้า · 20 คะแนน · ยังไม่เปิด</option></select>
+      <select id="assessmentSelect"><option value="defense">สอบวิพากษ์ · 20 คะแนน</option><option value="proposal">หัวข้อโครงงาน · 10 คะแนน</option><option value="advisor">อาจารย์ที่ปรึกษา · 50 คะแนน</option><option value="progress">รายงานความก้าวหน้า · 20 คะแนน</option></select>
       <div class="toolbar">
         <span class="updated-label" id="updatedLabel"></span>
         <button class="refresh-btn" id="refreshBtn">↻ รีเฟรช</button>
@@ -199,7 +199,7 @@
         if (data.status === 'error') throw new Error(data.message);
         if (data.status !== 'unauthorized' && !data.assessment) throw new Error('กรุณา Deploy Code.gs เวอร์ชันใหม่');
         dashboardMax = data.assessment ? data.assessment.max : dashboardMax;
-        document.getElementById('evaluatorProgressTitle').textContent = assessmentId === 'advisor' ? 'ความคืบหน้าของที่ปรึกษา' : 'ความคืบหน้าของกรรมการ';
+        document.getElementById('evaluatorProgressTitle').textContent = assessmentId === 'progress' ? 'ความคืบหน้าของผู้จัดการรายวิชา' : assessmentId === 'advisor' ? 'ความคืบหน้าของที่ปรึกษา' : 'ความคืบหน้าของกรรมการ';
         document.getElementById('loadingMsg').style.display = 'none';
 
         if (data && data.status === 'unauthorized') {

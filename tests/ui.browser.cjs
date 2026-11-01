@@ -26,7 +26,7 @@ for(const width of [1440,1180,1101,1100,1024,834,820,768,600,430,390,375,320]){
   await page.evaluate(()=>location.hash='students');await page.locator('#view-students').waitFor({state:'visible'});
   if(width<=900)assert.ok(await page.locator('#view-students .table-scroll').evaluate(node=>node.scrollWidth<=node.clientWidth),'No student list horizontal scroll '+width);
   await page.getByRole('button',{name:'แก้ไขคะแนน '+students[0].name,exact:true}).click();await page.locator('#view-grade').waitFor({state:'visible'});
-  const bounds=await page.locator('.score-summary').boundingBox();assert.ok(bounds.x>=0&&bounds.x+bounds.width<=width+1,'Grade summary fits '+width);
+  const bounds=await page.locator('#view-grade .score-summary').boundingBox();assert.ok(bounds.x>=0&&bounds.x+bounds.width<=width+1,'Grade summary fits '+width);
   await page.evaluate(()=>location.hash='overview');await page.locator('#view-overview').waitFor({state:'visible'});
   if(width<=1100){
     await page.evaluate(()=>scrollTo(0,180));const before=await page.evaluate(()=>scrollY);

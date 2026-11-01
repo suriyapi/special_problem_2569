@@ -34,7 +34,7 @@
 
     <div id="dashboardContent" style="display:none;">
       <label class="select-label" for="assessmentSelect">ส่วนการประเมิน</label>
-      <select id="assessmentSelect"><option value="defense">สอบวิพากษ์ · 20 คะแนน</option><option value="proposal">หัวข้อโครงงาน · 10 คะแนน</option><option disabled>อาจารย์ที่ปรึกษา · 50 คะแนน · ยังไม่เปิด</option><option disabled>รายงานความก้าวหน้า · 20 คะแนน · ยังไม่เปิด</option></select>
+      <select id="assessmentSelect"><option value="defense">สอบวิพากษ์ · 20 คะแนน</option><option value="proposal">หัวข้อโครงงาน · 10 คะแนน</option><option value="advisor">อาจารย์ที่ปรึกษา · 50 คะแนน</option><option disabled>รายงานความก้าวหน้า · 20 คะแนน · ยังไม่เปิด</option></select>
       <div class="toolbar">
         <span class="updated-label" id="updatedLabel"></span>
         <button class="refresh-btn" id="refreshBtn">↻ รีเฟรช</button>
@@ -56,20 +56,20 @@
       </div>
 
       <div class="card">
-        <h2>ความคืบหน้าของกรรมการ</h2><p class="chart-hint">แตะแถบความคืบหน้าเพื่อดูรายชื่อนิสิต</p>
+        <h2 id="evaluatorProgressTitle">ความคืบหน้าของกรรมการ</h2><p class="chart-hint">แตะแถบความคืบหน้าเพื่อดูรายชื่อนิสิต</p>
         <div id="evaluatorProgress"></div>
       </div>
 
       <div class="card">
         <h2>รายชื่อนิสิตทั้งหมด</h2>
-        <div class="admin-table-filters"><input type="search" id="searchInput" class="search-input" placeholder="ค้นหารหัสนิสิต / ชื่อ / หัวข้อ" aria-label="ค้นหานิสิต"><select id="dashboardRoomFilter" aria-label="กรองห้องสอบ"><option value="">ทุกห้อง / แผนการเรียน</option></select><div class="mobile-sort"><select id="dashboardSort" aria-label="เรียงลำดับรายชื่อนิสิต"><option value="">เรียงลำดับ</option><option value="name:1">ชื่อ ก–ฮ</option><option value="avg:-1">คะแนนมากไปน้อย</option><option value="avg:1">คะแนนน้อยไปมาก</option><option value="count:-1">จำนวนกรรมการมากไปน้อย</option><option value="room:1">ห้องสอบ</option></select></div></div>
+        <div class="admin-table-filters"><input type="search" id="searchInput" class="search-input" placeholder="ค้นหารหัสนิสิต / ชื่อ / หัวข้อ" aria-label="ค้นหานิสิต"><select id="dashboardRoomFilter" aria-label="กรองห้องสอบ"><option value="">ทุกห้อง / แผนการเรียน</option></select><div class="mobile-sort"><select id="dashboardSort" aria-label="เรียงลำดับรายชื่อนิสิต"><option value="">เรียงลำดับ</option><option value="name:1">ชื่อ ก–ฮ</option><option value="avg:-1">คะแนนมากไปน้อย</option><option value="avg:1">คะแนนน้อยไปมาก</option><option value="count:-1">จำนวนผู้ประเมินมากไปน้อย</option><option value="room:1">ห้องสอบ</option></select></div></div>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
                 <th class="sortable" data-sort="name">นิสิต<span class="sort-arrow"></span></th>
                 <th class="sortable" data-sort="room">ห้อง/แผน<span class="sort-arrow"></span></th>
-                <th class="sortable" data-sort="count">กรรมการ<span class="sort-arrow"></span></th>
+                <th class="sortable" data-sort="count">ผู้ประเมิน<span class="sort-arrow"></span></th>
                 <th class="sortable" data-sort="avg">เฉลี่ย<span class="sort-arrow"></span></th>
               </tr>
             </thead>
@@ -199,6 +199,7 @@
         if (data.status === 'error') throw new Error(data.message);
         if (data.status !== 'unauthorized' && !data.assessment) throw new Error('กรุณา Deploy Code.gs เวอร์ชันใหม่');
         dashboardMax = data.assessment ? data.assessment.max : dashboardMax;
+        document.getElementById('evaluatorProgressTitle').textContent = assessmentId === 'advisor' ? 'ความคืบหน้าของที่ปรึกษา' : 'ความคืบหน้าของกรรมการ';
         document.getElementById('loadingMsg').style.display = 'none';
 
         if (data && data.status === 'unauthorized') {
@@ -320,7 +321,7 @@
     const wrap = document.getElementById('evaluatorProgress');
     wrap.innerHTML = '';
     if (!byEvaluator || byEvaluator.length === 0) {
-      wrap.innerHTML = '<div class="no-results">ยังไม่มีข้อมูลกรรมการ (เช็คว่าชีท Committees มีข้อมูลหรือยัง)</div>';
+      wrap.innerHTML = '<div class="no-results">ยังไม่มีข้อมูลผู้ประเมิน กรุณาตรวจสอบการมอบหมายในหมวดนี้</div>';
       return;
     }
     byEvaluator.forEach(function (ev) {

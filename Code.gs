@@ -260,9 +260,268 @@ const DEFENSE_QUESTIONS = {
 };
 DEFENSE_CRITERIA.forEach(function(c) { c.questions = DEFENSE_QUESTIONS[c.key]; });
 
+const ADVISOR_RUBRIC_VERSION = 'advisor-v1-15';
+const ADVISOR_CRITERIA = [
+  {
+    "key": "a1",
+    "label": "การพัฒนาระบบสารสนเทศ",
+    "weight": 10,
+    "mapping": "CLO1 → PLO1",
+    "evidence": "ระบบที่รันได้ ผลทดสอบ และบันทึกการแก้ปัญหา",
+    "questions": [
+      {
+        "key": "a1_q1",
+        "label": "พัฒนาฟังก์ชันหลักตามขอบเขตโครงงาน",
+        "weight": 4,
+        "evidence": "สาธิตฟังก์ชันหลักเทียบกับขอบเขตที่ตกลง",
+        "prompt": "แสดงหลักฐานและอธิบายว่าพัฒนาฟังก์ชันหลักตามขอบเขตโครงงานอย่างไร",
+        "levels": [
+          "ไม่บรรลุเกณฑ์หรือไม่มีหลักฐานหลังถึงกำหนดประเมิน",
+          "มีหลักฐานเบื้องต้น แต่ยังไม่บรรลุข้อกำหนดส่วนใหญ่ของพัฒนาฟังก์ชันหลักตามขอบเขตโครงงาน",
+          "ทำได้บางส่วน แต่ยังต้องแก้ไขสาระสำคัญของพัฒนาฟังก์ชันหลักตามขอบเขตโครงงาน",
+          "ทำได้ตามข้อกำหนดของพัฒนาฟังก์ชันหลักตามขอบเขตโครงงาน มีข้อบกพร่องเล็กน้อย",
+          "ฟังก์ชันหลักทำงานครบตามขอบเขตและรองรับกรณีใช้งานที่กำหนด โดยมีหลักฐานชัดเจน"
+        ]
+      },
+      {
+        "key": "a1_q2",
+        "label": "ความถูกต้องของการประมวลผลและผลลัพธ์",
+        "weight": 3,
+        "evidence": "ชุดข้อมูลทดสอบ ผลลัพธ์ที่คาดหวัง และผลทดสอบจริง",
+        "prompt": "แสดงหลักฐานและอธิบายว่าความถูกต้องของการประมวลผลและผลลัพธ์อย่างไร",
+        "levels": [
+          "ไม่บรรลุเกณฑ์หรือไม่มีหลักฐานหลังถึงกำหนดประเมิน",
+          "มีหลักฐานเบื้องต้น แต่ยังไม่บรรลุข้อกำหนดส่วนใหญ่ของความถูกต้องของการประมวลผลและผลลัพธ์",
+          "ทำได้บางส่วน แต่ยังต้องแก้ไขสาระสำคัญของความถูกต้องของการประมวลผลและผลลัพธ์",
+          "ทำได้ตามข้อกำหนดของความถูกต้องของการประมวลผลและผลลัพธ์ มีข้อบกพร่องเล็กน้อย",
+          "ผลลัพธ์ถูกต้องทั้งกรณีปกติและกรณีผิดพลาดที่เกี่ยวข้อง โดยมีหลักฐานชัดเจน"
+        ]
+      },
+      {
+        "key": "a1_q3",
+        "label": "วิเคราะห์และแก้ปัญหาระหว่างพัฒนา",
+        "weight": 3,
+        "evidence": "บันทึกปัญหา การหาสาเหตุ วิธีแก้ และผลตรวจซ้ำ",
+        "prompt": "แสดงหลักฐานและอธิบายว่าวิเคราะห์และแก้ปัญหาระหว่างพัฒนาอย่างไร",
+        "levels": [
+          "ไม่บรรลุเกณฑ์หรือไม่มีหลักฐานหลังถึงกำหนดประเมิน",
+          "มีหลักฐานเบื้องต้น แต่ยังไม่บรรลุข้อกำหนดส่วนใหญ่ของวิเคราะห์และแก้ปัญหาระหว่างพัฒนา",
+          "ทำได้บางส่วน แต่ยังต้องแก้ไขสาระสำคัญของวิเคราะห์และแก้ปัญหาระหว่างพัฒนา",
+          "ทำได้ตามข้อกำหนดของวิเคราะห์และแก้ปัญหาระหว่างพัฒนา มีข้อบกพร่องเล็กน้อย",
+          "อธิบายสาเหตุ เลือกวิธีแก้ และตรวจยืนยันผลได้ด้วยตนเอง โดยมีหลักฐานชัดเจน"
+        ]
+      }
+    ]
+  },
+  {
+    "key": "a2",
+    "label": "เทคโนโลยีและการจัดการข้อมูล",
+    "weight": 10,
+    "mapping": "CLO2 → PLO2",
+    "evidence": "เหตุผลเลือกเครื่องมือ แบบจำลองข้อมูล และโครงสร้างโปรแกรม",
+    "questions": [
+      {
+        "key": "a2_q1",
+        "label": "เลือกเทคโนโลยีพร้อมเหตุผลและข้อจำกัด",
+        "weight": 4,
+        "evidence": "เปรียบเทียบทางเลือกกับบริบทและทรัพยากรโครงงาน",
+        "prompt": "แสดงหลักฐานและอธิบายว่าเลือกเทคโนโลยีพร้อมเหตุผลและข้อจำกัดอย่างไร",
+        "levels": [
+          "ไม่บรรลุเกณฑ์หรือไม่มีหลักฐานหลังถึงกำหนดประเมิน",
+          "มีหลักฐานเบื้องต้น แต่ยังไม่บรรลุข้อกำหนดส่วนใหญ่ของเลือกเทคโนโลยีพร้อมเหตุผลและข้อจำกัด",
+          "ทำได้บางส่วน แต่ยังต้องแก้ไขสาระสำคัญของเลือกเทคโนโลยีพร้อมเหตุผลและข้อจำกัด",
+          "ทำได้ตามข้อกำหนดของเลือกเทคโนโลยีพร้อมเหตุผลและข้อจำกัด มีข้อบกพร่องเล็กน้อย",
+          "เลือกเครื่องมือเหมาะกับปัญหาและอธิบายข้อจำกัดกับทางเลือกได้ โดยมีหลักฐานชัดเจน"
+        ]
+      },
+      {
+        "key": "a2_q2",
+        "label": "ออกแบบฐานข้อมูลหรือโครงสร้างจัดเก็บข้อมูล",
+        "weight": 3,
+        "evidence": "แบบจำลองข้อมูล ความสัมพันธ์ ข้อกำหนด และตัวอย่างการใช้งาน",
+        "prompt": "แสดงหลักฐานและอธิบายว่าออกแบบฐานข้อมูลหรือโครงสร้างจัดเก็บข้อมูลอย่างไร",
+        "levels": [
+          "ไม่บรรลุเกณฑ์หรือไม่มีหลักฐานหลังถึงกำหนดประเมิน",
+          "มีหลักฐานเบื้องต้น แต่ยังไม่บรรลุข้อกำหนดส่วนใหญ่ของออกแบบฐานข้อมูลหรือโครงสร้างจัดเก็บข้อมูล",
+          "ทำได้บางส่วน แต่ยังต้องแก้ไขสาระสำคัญของออกแบบฐานข้อมูลหรือโครงสร้างจัดเก็บข้อมูล",
+          "ทำได้ตามข้อกำหนดของออกแบบฐานข้อมูลหรือโครงสร้างจัดเก็บข้อมูล มีข้อบกพร่องเล็กน้อย",
+          "ออกแบบข้อมูลสอดคล้องกับประเภทข้อมูล ความสัมพันธ์ และการใช้งาน โดยมีหลักฐานชัดเจน"
+        ]
+      },
+      {
+        "key": "a2_q3",
+        "label": "จัดโครงสร้างโปรแกรมและการเข้าถึงข้อมูล",
+        "weight": 3,
+        "evidence": "โค้ด การแบ่งส่วนงาน เอกสาร และวิธีบำรุงรักษา",
+        "prompt": "แสดงหลักฐานและอธิบายว่าจัดโครงสร้างโปรแกรมและการเข้าถึงข้อมูลอย่างไร",
+        "levels": [
+          "ไม่บรรลุเกณฑ์หรือไม่มีหลักฐานหลังถึงกำหนดประเมิน",
+          "มีหลักฐานเบื้องต้น แต่ยังไม่บรรลุข้อกำหนดส่วนใหญ่ของจัดโครงสร้างโปรแกรมและการเข้าถึงข้อมูล",
+          "ทำได้บางส่วน แต่ยังต้องแก้ไขสาระสำคัญของจัดโครงสร้างโปรแกรมและการเข้าถึงข้อมูล",
+          "ทำได้ตามข้อกำหนดของจัดโครงสร้างโปรแกรมและการเข้าถึงข้อมูล มีข้อบกพร่องเล็กน้อย",
+          "โค้ดและการเข้าถึงข้อมูลเป็นระบบ อ่านเข้าใจและดูแลต่อได้ โดยมีหลักฐานชัดเจน"
+        ]
+      }
+    ]
+  },
+  {
+    "key": "a3",
+    "label": "บูรณาการตามความต้องการโครงงาน",
+    "weight": 15,
+    "mapping": "CLO3 → PLO3",
+    "evidence": "ความต้องการผู้ใช้ การทดสอบรวมระบบ และมาตรการความปลอดภัย",
+    "questions": [
+      {
+        "key": "a3_q1",
+        "label": "เชื่อมโยงความต้องการสู่การออกแบบและพัฒนา",
+        "weight": 5,
+        "evidence": "รายการความต้องการและหลักฐานติดตามถึงฟังก์ชันที่พัฒนา",
+        "prompt": "แสดงหลักฐานและอธิบายว่าเชื่อมโยงความต้องการสู่การออกแบบและพัฒนาอย่างไร",
+        "levels": [
+          "ไม่บรรลุเกณฑ์หรือไม่มีหลักฐานหลังถึงกำหนดประเมิน",
+          "มีหลักฐานเบื้องต้น แต่ยังไม่บรรลุข้อกำหนดส่วนใหญ่ของเชื่อมโยงความต้องการสู่การออกแบบและพัฒนา",
+          "ทำได้บางส่วน แต่ยังต้องแก้ไขสาระสำคัญของเชื่อมโยงความต้องการสู่การออกแบบและพัฒนา",
+          "ทำได้ตามข้อกำหนดของเชื่อมโยงความต้องการสู่การออกแบบและพัฒนา มีข้อบกพร่องเล็กน้อย",
+          "ติดตามความต้องการไปถึงการออกแบบ ผลงาน และผลตรวจรับได้ครบ โดยมีหลักฐานชัดเจน"
+        ]
+      },
+      {
+        "key": "a3_q2",
+        "label": "บูรณาการระบบและทดสอบการใช้งานจริง",
+        "weight": 5,
+        "evidence": "ผลทดสอบรวมระบบและข้อเสนอแนะจากผู้ใช้หรือผู้เกี่ยวข้อง",
+        "prompt": "แสดงหลักฐานและอธิบายว่าบูรณาการระบบและทดสอบการใช้งานจริงอย่างไร",
+        "levels": [
+          "ไม่บรรลุเกณฑ์หรือไม่มีหลักฐานหลังถึงกำหนดประเมิน",
+          "มีหลักฐานเบื้องต้น แต่ยังไม่บรรลุข้อกำหนดส่วนใหญ่ของบูรณาการระบบและทดสอบการใช้งานจริง",
+          "ทำได้บางส่วน แต่ยังต้องแก้ไขสาระสำคัญของบูรณาการระบบและทดสอบการใช้งานจริง",
+          "ทำได้ตามข้อกำหนดของบูรณาการระบบและทดสอบการใช้งานจริง มีข้อบกพร่องเล็กน้อย",
+          "ส่วนประกอบทำงานร่วมกันและผ่านกรณีทดสอบตามบริบทใช้งานจริง โดยมีหลักฐานชัดเจน"
+        ]
+      },
+      {
+        "key": "a3_q3",
+        "label": "ความปลอดภัย สิทธิ์เข้าถึง และปกป้องข้อมูล",
+        "weight": 5,
+        "evidence": "ผลทดสอบสิทธิ์ การตรวจข้อมูล และมาตรการตามความเสี่ยง",
+        "prompt": "แสดงหลักฐานและอธิบายว่าความปลอดภัย สิทธิ์เข้าถึง และปกป้องข้อมูลอย่างไร",
+        "levels": [
+          "ไม่บรรลุเกณฑ์หรือไม่มีหลักฐานหลังถึงกำหนดประเมิน",
+          "มีหลักฐานเบื้องต้น แต่ยังไม่บรรลุข้อกำหนดส่วนใหญ่ของความปลอดภัย สิทธิ์เข้าถึง และปกป้องข้อมูล",
+          "ทำได้บางส่วน แต่ยังต้องแก้ไขสาระสำคัญของความปลอดภัย สิทธิ์เข้าถึง และปกป้องข้อมูล",
+          "ทำได้ตามข้อกำหนดของความปลอดภัย สิทธิ์เข้าถึง และปกป้องข้อมูล มีข้อบกพร่องเล็กน้อย",
+          "จัดการสิทธิ์และปกป้องข้อมูลตามบริบทพร้อมผลทดสอบยืนยัน โดยมีหลักฐานชัดเจน"
+        ]
+      }
+    ]
+  },
+  {
+    "key": "a4",
+    "label": "ความรับผิดชอบต่องานที่มอบหมาย",
+    "weight": 10,
+    "mapping": "CLO4 → PLO6",
+    "evidence": "แผนงาน สิ่งส่งมอบ บันทึกปรึกษา และผลงานรายบุคคล",
+    "questions": [
+      {
+        "key": "a4_q1",
+        "label": "วางแผน ติดตาม และส่งมอบตามข้อตกลง",
+        "weight": 5,
+        "evidence": "แผนงาน สิ่งส่งมอบ การแจ้งปัญหา และการปรับแผนที่ตกลง",
+        "prompt": "แสดงหลักฐานและอธิบายว่าวางแผน ติดตาม และส่งมอบตามข้อตกลงอย่างไร",
+        "levels": [
+          "ไม่บรรลุเกณฑ์หรือไม่มีหลักฐานหลังถึงกำหนดประเมิน",
+          "มีหลักฐานเบื้องต้น แต่ยังไม่บรรลุข้อกำหนดส่วนใหญ่ของวางแผน ติดตาม และส่งมอบตามข้อตกลง",
+          "ทำได้บางส่วน แต่ยังต้องแก้ไขสาระสำคัญของวางแผน ติดตาม และส่งมอบตามข้อตกลง",
+          "ทำได้ตามข้อกำหนดของวางแผน ติดตาม และส่งมอบตามข้อตกลง มีข้อบกพร่องเล็กน้อย",
+          "ติดตามและส่งมอบตามแผน หรือแจ้งปัญหาและปรับแผนอย่างมีเหตุผล โดยมีหลักฐานชัดเจน"
+        ]
+      },
+      {
+        "key": "a4_q2",
+        "label": "รับผิดชอบงานตนเองและรายงานตามจริง",
+        "weight": 5,
+        "evidence": "ระบุบทบาท หลักฐานงาน และสถานะจริงของงาน",
+        "prompt": "แสดงหลักฐานและอธิบายว่ารับผิดชอบงานตนเองและรายงานตามจริงอย่างไร",
+        "levels": [
+          "ไม่บรรลุเกณฑ์หรือไม่มีหลักฐานหลังถึงกำหนดประเมิน",
+          "มีหลักฐานเบื้องต้น แต่ยังไม่บรรลุข้อกำหนดส่วนใหญ่ของรับผิดชอบงานตนเองและรายงานตามจริง",
+          "ทำได้บางส่วน แต่ยังต้องแก้ไขสาระสำคัญของรับผิดชอบงานตนเองและรายงานตามจริง",
+          "ทำได้ตามข้อกำหนดของรับผิดชอบงานตนเองและรายงานตามจริง มีข้อบกพร่องเล็กน้อย",
+          "มีหลักฐานงานที่รับผิดชอบและรายงานข้อจำกัดกับสถานะตามจริง โดยมีหลักฐานชัดเจน"
+        ]
+      }
+    ]
+  },
+  {
+    "key": "a5",
+    "label": "สื่อสาร ทำงานร่วมกัน และจรรยาบรรณ",
+    "weight": 5,
+    "mapping": "CLO5 → PLO4, PLO5",
+    "evidence": "การสื่อสาร ข้อเสนอแนะ แหล่งอ้างอิง และการใช้ IT/AI",
+    "questions": [
+      {
+        "key": "a5_q1",
+        "label": "สื่อสารและนำเสนอความก้าวหน้า",
+        "weight": 1,
+        "evidence": "บันทึกหรือสื่อนำเสนอให้ที่ปรึกษาเข้าใจความก้าวหน้า",
+        "prompt": "แสดงหลักฐานและอธิบายว่าสื่อสารและนำเสนอความก้าวหน้าอย่างไร",
+        "levels": [
+          "ไม่บรรลุเกณฑ์หรือไม่มีหลักฐานหลังถึงกำหนดประเมิน",
+          "มีหลักฐานเบื้องต้น แต่ยังไม่บรรลุข้อกำหนดส่วนใหญ่ของสื่อสารและนำเสนอความก้าวหน้า",
+          "ทำได้บางส่วน แต่ยังต้องแก้ไขสาระสำคัญของสื่อสารและนำเสนอความก้าวหน้า",
+          "ทำได้ตามข้อกำหนดของสื่อสารและนำเสนอความก้าวหน้า มีข้อบกพร่องเล็กน้อย",
+          "สื่อสารผลงาน ปัญหา และงานถัดไปอย่างชัดเจนเหมาะกับผู้รับ โดยมีหลักฐานชัดเจน"
+        ]
+      },
+      {
+        "key": "a5_q2",
+        "label": "ประสานงานตามบทบาทกับผู้เกี่ยวข้อง",
+        "weight": 1,
+        "evidence": "ข้อตกลง บทบาท และหลักฐานประสานสมาชิกหรือผู้ใช้",
+        "prompt": "แสดงหลักฐานและอธิบายว่าประสานงานตามบทบาทกับผู้เกี่ยวข้องอย่างไร",
+        "levels": [
+          "ไม่บรรลุเกณฑ์หรือไม่มีหลักฐานหลังถึงกำหนดประเมิน",
+          "มีหลักฐานเบื้องต้น แต่ยังไม่บรรลุข้อกำหนดส่วนใหญ่ของประสานงานตามบทบาทกับผู้เกี่ยวข้อง",
+          "ทำได้บางส่วน แต่ยังต้องแก้ไขสาระสำคัญของประสานงานตามบทบาทกับผู้เกี่ยวข้อง",
+          "ทำได้ตามข้อกำหนดของประสานงานตามบทบาทกับผู้เกี่ยวข้อง มีข้อบกพร่องเล็กน้อย",
+          "ประสานงานตามบทบาทและจัดการข้อตกลงกับผู้เกี่ยวข้องได้ โดยมีหลักฐานชัดเจน"
+        ]
+      },
+      {
+        "key": "a5_q3",
+        "label": "นำข้อเสนอแนะไปปรับปรุงและพัฒนาตนเอง",
+        "weight": 1,
+        "evidence": "ข้อเสนอแนะเดิมและผลงานที่ปรับปรุงพร้อมเหตุผล",
+        "prompt": "แสดงหลักฐานและอธิบายว่านำข้อเสนอแนะไปปรับปรุงและพัฒนาตนเองอย่างไร",
+        "levels": [
+          "ไม่บรรลุเกณฑ์หรือไม่มีหลักฐานหลังถึงกำหนดประเมิน",
+          "มีหลักฐานเบื้องต้น แต่ยังไม่บรรลุข้อกำหนดส่วนใหญ่ของนำข้อเสนอแนะไปปรับปรุงและพัฒนาตนเอง",
+          "ทำได้บางส่วน แต่ยังต้องแก้ไขสาระสำคัญของนำข้อเสนอแนะไปปรับปรุงและพัฒนาตนเอง",
+          "ทำได้ตามข้อกำหนดของนำข้อเสนอแนะไปปรับปรุงและพัฒนาตนเอง มีข้อบกพร่องเล็กน้อย",
+          "นำข้อเสนอแนะไปปรับปรุงและอธิบายสิ่งที่เรียนรู้ได้ชัดเจน โดยมีหลักฐานชัดเจน"
+        ]
+      },
+      {
+        "key": "a5_q4",
+        "label": "จรรยาบรรณ ข้อมูล แหล่งที่มา และการใช้ AI",
+        "weight": 2,
+        "evidence": "แหล่งอ้างอิง สิทธิ์ใช้งาน การดูแลข้อมูล และคำชี้แจงการใช้ AI",
+        "prompt": "แสดงหลักฐานและอธิบายว่าจรรยาบรรณ ข้อมูล แหล่งที่มา และการใช้ AIอย่างไร",
+        "levels": [
+          "ไม่บรรลุเกณฑ์หรือไม่มีหลักฐานหลังถึงกำหนดประเมิน",
+          "มีหลักฐานเบื้องต้น แต่ยังไม่บรรลุข้อกำหนดส่วนใหญ่ของจรรยาบรรณ ข้อมูล แหล่งที่มา และการใช้ AI",
+          "ทำได้บางส่วน แต่ยังต้องแก้ไขสาระสำคัญของจรรยาบรรณ ข้อมูล แหล่งที่มา และการใช้ AI",
+          "ทำได้ตามข้อกำหนดของจรรยาบรรณ ข้อมูล แหล่งที่มา และการใช้ AI มีข้อบกพร่องเล็กน้อย",
+          "อ้างอิงและเคารพสิทธิ์ ดูแลข้อมูล เปิดเผยและตรวจสอบการใช้ AI ตามบริบท โดยมีหลักฐานชัดเจน"
+        ]
+      }
+    ]
+  }
+];
+
 const ASSESSMENTS = {
   proposal: { id: 'proposal', label: 'หัวข้อโครงงาน', max: 10, status: 'completed', sheet: 'Scores', criteria: CRITERIA },
-  advisor: { id: 'advisor', label: 'อาจารย์ที่ปรึกษา', max: 50, status: 'planned', criteria: [] },
+  advisor: { id: 'advisor', label: 'อาจารย์ที่ปรึกษา', max: 50, status: 'open', sheet: 'AdvisorScores', criteria: ADVISOR_CRITERIA, rubricVersion: ADVISOR_RUBRIC_VERSION },
   progress: { id: 'progress', label: 'รายงานความก้าวหน้า', max: 20, status: 'planned', criteria: [] },
   defense: { id: 'defense', label: 'สอบวิพากษ์', max: 20, status: 'open', sheet: 'DefenseScores', criteria: DEFENSE_CRITERIA, rubricVersion: DEFENSE_RUBRIC_VERSION }
 };
@@ -296,7 +555,9 @@ function doGet(e) {
   if (action === 'getStudentById') {
     const auth = getMyEvaluatorInfo(e.parameter.idToken);
     if (!auth.ok) return jsonOutput({ status: 'unauthorized', reason: auth.reason });
-    return jsonOutput(getStudentById(e.parameter.id));
+    const student = getStudentById(e.parameter.id);
+    const assigned = student && (auth.assignments.some(function(a) { return a.term === student.term && a.room === student.room; }) || advisorAssignments_(auth.email).some(function(a) { return a.studentId === student.id; }));
+    return jsonOutput(assigned ? student : { status: 'error', message: 'ไม่พบนิสิตในความรับผิดชอบ' });
   }
   if (action === 'getCriteria') {
     return jsonOutput({ assessments: Object.keys(ASSESSMENTS).map(function (key) {
@@ -304,6 +565,7 @@ function doGet(e) {
       return { id: a.id, label: a.label, max: a.max, status: a.status, criteria: a.criteria, rubricVersion: a.rubricVersion };
     }), scaleLabels: SCALE_LABELS });
   }
+  if (action === 'getAdvisorWorkspace') return jsonOutput(getAdvisorWorkspace(e.parameter.idToken));
   if (action === 'getMyWorkspace') {
     return jsonOutput(getMyWorkspace(e.parameter.idToken));
   }
@@ -332,7 +594,7 @@ function doGet(e) {
 function doPost(e) {
   try {
     const payload = JSON.parse(e.postData.contents);
-    const result = submitScore(payload);
+    const result = payload.assessment === 'advisor' ? submitAdvisor(payload) : submitScore(payload);
     return jsonOutput(result);
   } catch (err) {
     return jsonOutput({ status: 'error', message: err.message });
@@ -396,10 +658,10 @@ function getMyEvaluatorInfo(idToken) {
   if (!auth.ok) return { ok: false, reason: auth.reason };
 
   const match = findEvaluatorByEmail(auth.email);
-  if (!match) {
-    return { ok: false, reason: 'not_committee_member', email: auth.email };
-  }
-  return { ok: true, email: auth.email, name: match.name, assignments: match.assignments };
+  const advisor = advisorAssignments_(auth.email);
+  if (!match && !advisor.length) return { ok: false, reason: 'not_committee_member', email: auth.email };
+  return { ok: true, email: auth.email, name: match ? match.name : advisor[0].name,
+    assignments: match ? match.assignments : [], advisorCount: advisor.length };
 }
 
 /** ค้นหากรรมการจากอีเมล (คอลัมน์ D ของชีท Committees) คืนชื่อ + (แผนการเรียน+ห้องสอบ) ทุกแถวที่ตรง */
@@ -541,6 +803,7 @@ function submitScore(payload) {
   if (assessment.status !== 'open') throw new Error('หมวดนี้ยังไม่เปิดรับคะแนนหรือปิดการประเมินแล้ว');
   const student = getStudentById(payload.studentId);
   if (!student) throw new Error('ไม่พบรหัสนิสิต');
+  if (assessment.id !== 'defense') throw new Error('กรุณาใช้แบบประเมินที่ตรงกับหมวดคะแนน');
   if (!auth.assignments.some(function (a) { return a.term === student.term && a.room === student.room; })) {
     throw new Error('นิสิตไม่อยู่ในห้องสอบ/แผนการเรียนที่ได้รับมอบหมาย');
   }
@@ -649,7 +912,9 @@ function getDashboardData(assessmentId) {
   const ss = getSS();
   const studentsData = ss.getSheetByName('Students').getDataRange().getValues();
   const scoreSheet = ss.getSheetByName(assessment.sheet);
-  const scoresData = scoreSheet ? scoreSheet.getDataRange().getValues() : [];
+  let scoresData = scoreSheet ? scoreSheet.getDataRange().getValues() : [];
+  const advisorMap = assessment.id === 'advisor' ? advisorAllAssignments_() : [];
+  if (assessment.id === 'advisor') scoresData = scoresData.filter(function(r,i) { return i === 0 || advisorMap.some(function(a) { return a.studentId === String(r[1]).trim() && a.email === String(r[12] || '').trim().toLowerCase(); }); });
   const committeesData = ss.getSheetByName('Committees').getDataRange().getValues();
 
   // จำนวนกรรมการที่ควรมีต่อ (แผนการเรียน+ห้องสอบ) หนึ่งชุด
@@ -723,7 +988,7 @@ function getDashboardData(assessmentId) {
       advisor: studentsData[i][4],
       topic: studentsData[i][5],
       count: count,
-      expected: expectedMap[term + '|' + room] || 0,
+      expected: assessment.id === 'advisor' ? advisorMap.filter(function(a) { return a.studentId === id; }).length : (expectedMap[term + '|' + room] || 0),
       avg: avg
     });
   }
@@ -754,7 +1019,7 @@ function getDashboardData(assessmentId) {
     if (s.avg !== null) allAverages.push(s.avg);
   });
 
-  const byEvaluator = getEvaluatorProgress(committeesData, scoresData, students);
+  const byEvaluator = assessment.id === 'advisor' ? advisorProgress_(advisorMap,scoresData,students) : getEvaluatorProgress(committeesData, scoresData, students);
 
   return {
     assessment: { id: assessment.id, label: assessment.label, max: assessment.max },
@@ -995,4 +1260,162 @@ function buildSummaryFormulas() {
       '=IF(C' + r + '=0,"-",AVERAGEIF(Scores!B:B,A' + r + ',Scores!L:L))'
     );
   }
+}
+
+/** สิทธิ์ที่ปรึกษาเป็นรายนิสิต: Advisors มีลำดับเหนือการจับคู่ชื่อเดิมแบบตรงและไม่กำกวม */
+function advisorAssignments_(email) {
+  const ss = getSS(), target = String(email || '').trim().toLowerCase();
+  const students = ss.getSheetByName('Students').getDataRange().getValues().slice(1);
+  const explicitSheet = ss.getSheetByName('Advisors');
+  const explicit = explicitSheet ? explicitSheet.getDataRange().getValues().slice(1) : [];
+  const overrides = Object.create(null), result = Object.create(null);
+  explicit.forEach(function(r) { const id = String(r[0] || '').trim(); if (id) overrides[id] = true; });
+  explicit.forEach(function(r) {
+    const id = String(r[0] || '').trim(), student = students.find(function(s) { return String(s[0]).trim() === id; });
+    if (student && String(r[1] || '').trim().toLowerCase() === target) result[id] = { studentId: id, name: String(r[2] || student[4] || target).trim() };
+  });
+  // ใช้ชื่อเต็มตรงกันเท่านั้น และต้องผูกได้กับอีเมลเดียว ห้ามเดาหรือจับคู่บางส่วน
+  const committee = ss.getSheetByName('Committees');
+  const names = Object.create(null);
+  (committee ? committee.getDataRange().getValues().slice(1) : []).forEach(function(r) {
+    const name = String(r[2] || '').trim(), address = String(r[3] || '').trim().toLowerCase();
+    if (!name || !address) return;
+    if (!names[name]) names[name] = Object.create(null);
+    names[name][address] = true;
+  });
+  students.forEach(function(r) {
+    const id = String(r[0] || '').trim(), name = String(r[4] || '').trim();
+    if (id && !overrides[id] && names[name] && Object.keys(names[name]).length === 1 && names[name][target]) result[id] = { studentId: id, name: name };
+  });
+  return Object.keys(result).map(function(id) { return result[id]; });
+}
+function advisorQuestions_() { return ADVISOR_CRITERIA.reduce(function(all,c) { return all.concat(c.questions); }, []); }
+function advisorHeaders_() {
+  return ['Timestamp','รหัสนิสิต','ชื่อนิสิต','ห้องสอบ','แผนการเรียน','ชื่อที่ปรึกษาผู้ประเมิน']
+    .concat(ADVISOR_CRITERIA.map(function(c) { return c.label + ' (0-4)'; }))
+    .concat(['คะแนนรวม (เต็ม 50)','อีเมลที่ปรึกษา','เวอร์ชันเกณฑ์ที่ปรึกษา'])
+    .concat(advisorQuestions_().map(function(q) { return q.key + ' · ' + q.label + ' (0–4)'; }))
+    .concat(['หลักฐานรายข้อ JSON','หมายเหตุ']);
+}
+function advisorSheet_(name, headers) {
+  const ss = getSS(); let sheet = ss.getSheetByName(name);
+  if (!sheet) sheet = ss.insertSheet(name);
+  const data = sheet.getDataRange().getValues(), head = data[0] || [];
+  const occupied = data.some(function(r) { return r.some(function(v) { return v !== '' && v !== null && v !== undefined; }); });
+  if (occupied && (head.length !== headers.length || headers.some(function(label,i) { return head[i] !== label; }))) throw new Error('โครงสร้างชีท ' + name + ' ไม่ตรง กรุณาให้ผู้ดูแลตรวจสอบ ระบบไม่เขียนทับข้อมูลเดิม');
+  if (!occupied) {
+    const columns = sheet.getMaxColumns();
+    if (columns < headers.length) sheet.insertColumnsAfter(columns, headers.length - columns);
+    sheet.getRange(1,1,1,headers.length).setValues([headers]);
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+function advisorText_(value, max) {
+  if (value === undefined || value === null) return '';
+  if (typeof value !== 'string' || value.length > max) throw new Error('ข้อความยาวเกินกำหนดหรือรูปแบบไม่ถูกต้อง');
+  return value.trim();
+}
+function advisorCell_(text) { return /^[=+@-]/.test(text) ? "'" + text : text; }
+function validateAdvisorAnswers_(answers, partial) {
+  const questions = advisorQuestions_(), keys = questions.map(function(q) { return q.key; });
+  if (!answers || typeof answers !== 'object' || Array.isArray(answers)) throw new Error('ข้อมูลคะแนนไม่ถูกต้อง');
+  if (Object.keys(answers).some(function(k) { return keys.indexOf(k) === -1; })) throw new Error('พบข้อคะแนนที่ไม่อยู่ในเกณฑ์');
+  if (!partial && Object.keys(answers).length !== 15) throw new Error('กรุณาประเมินครบทั้ง 15 ข้อก่อนยืนยัน');
+  Object.keys(answers).forEach(function(k) { const v=answers[k]; if (typeof v !== 'number' || !Number.isInteger(v) || v < 0 || v > 4) throw new Error('คะแนนต้องเป็นจำนวนเต็ม 0–4'); });
+  let total = 0; const rawValues = [], criterionScores = {};
+  ADVISOR_CRITERIA.forEach(function(c) {
+    let points = 0; c.questions.forEach(function(q) { if (Object.prototype.hasOwnProperty.call(answers,q.key)) points += answers[q.key] / 4 * q.weight; });
+    total += points; const raw = points / c.weight * 4; rawValues.push(raw); criterionScores[c.key] = raw;
+  });
+  return { total: Math.round(total*100)/100, rawValues: rawValues, criterionScores: criterionScores };
+}
+function advisorDate_(value, required) {
+  const text = advisorText_(value,10);
+  if (!text && !required) return '';
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text) || isNaN(new Date(text+'T00:00:00Z').getTime()) || new Date(text+'T00:00:00Z').toISOString().slice(0,10) !== text) throw new Error('วันที่ไม่ถูกต้อง');
+  return text;
+}
+function advisorTime_(value) { return value instanceof Date ? value.toISOString() : String(value || ''); }
+function getAdvisorWorkspace(idToken) {
+  const auth = getMyEvaluatorInfo(idToken);
+  if (!auth.ok) return { status: 'unauthorized', reason: auth.reason };
+  const assignments = advisorAssignments_(auth.email), allowed = assignments.map(function(a) { return a.studentId; });
+  const students = [], seen = Object.create(null);
+  getSS().getSheetByName('Students').getDataRange().getValues().slice(1).forEach(function(r) {
+    const id=String(r[0] || '').trim(); if (allowed.indexOf(id)<0 || seen[id]) return; seen[id]=true;
+    students.push({ id:id,name:r[1],room:r[2],term:r[3],advisor:r[4],topic:r[5] || '' });
+  });
+  function rows(name) { const sheet=getSS().getSheetByName(name);return sheet?sheet.getDataRange().getValues().slice(1):[]; }
+  function own(r,idIndex,emailIndex) { return allowed.indexOf(String(r[idIndex]).trim())>=0 && String(r[emailIndex] || '').trim().toLowerCase()===auth.email.toLowerCase(); }
+  function record(r) {
+    const answers = {}; advisorQuestions_().forEach(function(q,i) { if (typeof r[14+i]==='number' && Number.isInteger(r[14+i]) && r[14+i]>=0 && r[14+i]<=4) answers[q.key]=r[14+i]; });
+    let evidence={};try{evidence=JSON.parse(r[29] || '{}');}catch(e){}
+    return { assessment:'advisor',studentId:String(r[1]).trim(),questionScores:answers,evidence:evidence,note:String(r[30] || ''),rubricVersion:r[13],total:r[11]===''?null:Number(r[11]),updatedAt:advisorTime_(r[0]) };
+  }
+  return { status:'ok',students:students,
+    records:rows('AdvisorScores').filter(function(r){return own(r,1,12);}).map(record),
+    drafts:rows('AdvisorDrafts').filter(function(r){return own(r,1,12);}).map(record),
+    consultations:rows('AdvisorConsultations').filter(function(r){return own(r,2,3);}).map(function(r){return {id:r[0],updatedAt:advisorTime_(r[1]),studentId:String(r[2]).trim(),date:r[5],work:r[6],evidence:r[7],problems:r[8],feedback:r[9],nextDate:r[10]};}),
+    revisions:rows('AdvisorAudit').filter(function(r){return own(r,2,3);}).map(function(r){return {id:r[0],updatedAt:advisorTime_(r[1]),studentId:String(r[2]).trim(),action:r[4],total:r[5],snapshot:JSON.parse(r[6])};}) };
+}
+function submitAdvisor(payload) {
+  const auth=getMyEvaluatorInfo(payload.idToken);
+  if(!auth.ok)return {status:'unauthorized',message:'กรุณาเข้าสู่ระบบด้วยบัญชีที่ปรึกษาที่ลงทะเบียน'};
+  const assignment=advisorAssignments_(auth.email).find(function(a){return a.studentId===String(payload.studentId || '').trim();});
+  if(!assignment)throw new Error('คุณไม่ได้เป็นที่ปรึกษาของนิสิตคนนี้');
+  if(['saveDraft','confirm','consultation'].indexOf(payload.action)<0)throw new Error('คำสั่งไม่ถูกต้อง');
+  const student=getStudentById(payload.studentId);if(!student)throw new Error('ไม่พบนิสิต');
+  const lock=LockService.getScriptLock();lock.waitLock(30000);
+  try {
+    if(payload.action==='consultation') {
+      const entry=payload.entry || {}, requestId=advisorText_(payload.requestId,80);
+      if(!/^[a-zA-Z0-9_-]{8,80}$/.test(requestId))throw new Error('รหัสรายการไม่ถูกต้อง');
+      const date=advisorDate_(entry.date,true), nextDate=advisorDate_(entry.nextDate,false);
+      const work=advisorText_(entry.work,4000);if(!work)throw new Error('กรุณาระบุงานที่ตกลงหรือความก้าวหน้า');
+      const sheet=advisorSheet_('AdvisorConsultations',['รหัสรายการ','Timestamp','รหัสนิสิต','อีเมลที่ปรึกษา','ชื่อที่ปรึกษา','วันที่ให้คำปรึกษา','งานที่ตกลง/ความก้าวหน้า','หลักฐาน','ปัญหา','ข้อเสนอแนะ','นัดหมายถัดไป']);
+      const data=sheet.getDataRange().getValues();
+      const existing=data.slice(1).find(function(r){return r[0]===requestId && r[3]===auth.email;});
+      if(existing)return {status:'created',id:requestId};
+      sheet.appendRow([requestId,new Date(),student.id,auth.email,assignment.name,date,work,advisorText_(entry.evidence,4000),advisorText_(entry.problems,4000),advisorText_(entry.feedback,4000),nextDate].map(function(v){return typeof v==='string'?advisorCell_(v):v;}));
+      SpreadsheetApp.flush();return {status:'created',id:requestId};
+    }
+    if(payload.rubricVersion!==ADVISOR_RUBRIC_VERSION)throw new Error('เกณฑ์ที่ปรึกษาเปลี่ยนแล้ว กรุณาโหลดหน้าใหม่');
+    const partial=payload.action==='saveDraft', calculated=validateAdvisorAnswers_(payload.questionScores,partial);
+    const evidence=payload.evidence || {}, safeEvidence={};
+    if(typeof evidence!=='object' || Array.isArray(evidence) || Object.keys(evidence).some(function(k){return !advisorQuestions_().some(function(q){return q.key===k;});}))throw new Error('หลักฐานรายข้อไม่ถูกต้อง');
+    Object.keys(evidence).forEach(function(k){safeEvidence[k]=advisorText_(evidence[k],1500);});
+    const note=advisorText_(payload.note,4000), time=new Date();
+    const sheet=advisorSheet_(partial?'AdvisorDrafts':'AdvisorScores',advisorHeaders_());
+    const data=sheet.getDataRange().getValues();
+    const audit=advisorSheet_('AdvisorAudit',['รหัสรายการ','Timestamp','รหัสนิสิต','อีเมลที่ปรึกษา','การดำเนินการ','คะแนนยืนยัน','รายละเอียด JSON']);
+    const row=[time,student.id,student.name,student.room,student.term,assignment.name].concat(calculated.rawValues)
+      .concat([partial?'':calculated.total,auth.email,ADVISOR_RUBRIC_VERSION])
+      .concat(advisorQuestions_().map(function(q){return Object.prototype.hasOwnProperty.call(payload.questionScores,q.key)?payload.questionScores[q.key]:'';}))
+      .concat([JSON.stringify(safeEvidence),note]).map(function(v){return typeof v==='string'?advisorCell_(v):v;});
+    const index=data.findIndex(function(r,i){return i>0 && String(r[1]).trim()===student.id && String(r[12] || '').toLowerCase()===auth.email.toLowerCase();});
+    if(index>0)sheet.getRange(index+1,1,1,row.length).setValues([row]);else sheet.appendRow(row);
+    audit.appendRow([Utilities.getUuid(),time,student.id,auth.email,partial?'draft':'confirmed',partial?'':calculated.total,JSON.stringify({rubricVersion:ADVISOR_RUBRIC_VERSION,questionScores:payload.questionScores,evidence:safeEvidence,note:note})]);
+    SpreadsheetApp.flush();return {status:index>0?'updated':'created',total:partial?null:calculated.total,updatedAt:time.toISOString(),rubricVersion:ADVISOR_RUBRIC_VERSION};
+  } finally { lock.releaseLock(); }
+}
+/** รันได้โดยไม่ล้างข้อมูลเดิม; การบันทึกครั้งแรกสร้างชีทที่ใช้ให้อัตโนมัติอยู่แล้ว */
+function setupAdvisorSheets() {
+  const lock=LockService.getScriptLock();lock.waitLock(30000);
+  try {
+    advisorSheet_('Advisors',['รหัสนิสิต','อีเมลที่ปรึกษา','ชื่อที่ปรึกษา']);
+    advisorSheet_('AdvisorScores',advisorHeaders_());advisorSheet_('AdvisorDrafts',advisorHeaders_());
+    advisorSheet_('AdvisorAudit',['รหัสรายการ','Timestamp','รหัสนิสิต','อีเมลที่ปรึกษา','การดำเนินการ','คะแนนยืนยัน','รายละเอียด JSON']);
+    advisorSheet_('AdvisorConsultations',['รหัสรายการ','Timestamp','รหัสนิสิต','อีเมลที่ปรึกษา','ชื่อที่ปรึกษา','วันที่ให้คำปรึกษา','งานที่ตกลง/ความก้าวหน้า','หลักฐาน','ปัญหา','ข้อเสนอแนะ','นัดหมายถัดไป']);
+  } finally { lock.releaseLock(); }
+}
+function advisorAllAssignments_() {
+  const ss=getSS(), emails=Object.create(null), result=[];
+  ['Committees','Advisors'].forEach(function(name){const sheet=ss.getSheetByName(name);if(!sheet)return;sheet.getDataRange().getValues().slice(1).forEach(function(r){const email=String(r[name==='Advisors'?1:3] || '').trim().toLowerCase();if(email)emails[email]=true;});});
+  Object.keys(emails).forEach(function(email){advisorAssignments_(email).forEach(function(a){result.push({studentId:a.studentId,email:email,name:a.name});});});return result;
+}
+function advisorProgress_(assignments,scores,students) {
+  const people=Object.create(null);
+  assignments.forEach(function(a){if(!people[a.email])people[a.email]={name:a.name,assignments:[],expected:0,done:0,doneStudents:[],pendingStudents:[]};const person=people[a.email],s=students.find(function(s){return s.id===a.studentId;});if(!s)return;const entry={id:s.id,name:s.name,room:s.room,term:s.term};person.expected++;const done=scores.slice(1).some(function(r){return String(r[1]).trim()===s.id && String(r[12] || '').trim().toLowerCase()===a.email;});if(done){person.done++;person.doneStudents.push(entry);}else person.pendingStudents.push(entry);if(!person.assignments.some(function(x){return x.room===s.room&&x.term===s.term;}))person.assignments.push({room:s.room,term:s.term});});
+  return Object.keys(people).sort().map(function(email){return people[email];});
 }

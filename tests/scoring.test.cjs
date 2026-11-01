@@ -32,7 +32,7 @@ test('upsert is keyed by student and verified email',()=>{
   const {context,sheets,payload}=fixture(); context.submitScore(payload); sheets.Committees[1][2]='Renamed'; payload.questionScores.c1_q1=0;payload.questionScores.c1_q2=0;payload.questionScores.c1_q3=0;
   assert.equal(context.submitScore(payload).status,'updated'); assert.equal(sheets.DefenseScores.length,2); assert.equal(sheets.DefenseScores[1][11],14);
 });
-test('invalid token, wrong assignment, closed/planned sections and invalid scores cannot write',()=>{
+test('invalid token, wrong assignment, non-defense sections and invalid scores cannot write via defense endpoint',()=>{
   const {context,sheets,payload}=fixture();
   assert.equal(context.submitScore({...payload,idToken:'bad'}).status,'unauthorized');
   for(const assessment of ['proposal','advisor','progress','unknown','toString']) assert.throws(()=>context.submitScore({...payload,assessment}));

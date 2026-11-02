@@ -1,0 +1,3 @@
+const {fixture}=require('./advisor-fixture.cjs');
+function full(){const f=fixture(),{context:c,sheets:s,payload}=f;s.Scores=[['Timestamp','id','name','room','term','evaluator','c1','c2','c3','c4','c5','total'],[new Date(),'123','Student','R1','regular','Teacher',4,4,4,4,4,10]];c.submitAdvisor(payload);c.submitScore({idToken:'valid',assessment:'defense',studentId:'123',rubricVersion:'defense-v2-15',questionScores:Object.fromEntries(c.getDefenseQuestions_().map(q=>[q.key,4]))});c.submitProgress({idToken:'manager',assessment:'progress',action:'confirm',studentId:'123',planRevision:0,rubricVersion:'progress-v1-15',questionScores:Object.fromEntries(c.progressQuestions_().map(q=>[q.key,4]))});return f;}
+module.exports={full};

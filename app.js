@@ -127,7 +127,7 @@ async function loadWorkspace() {
     if (!defense()?.rubricVersion || defenseQuestions().length !== 15) throw new Error('เกณฑ์สอบวิพากษ์ปรับเป็น 15 ข้อย่อย กรุณารีเฟรชหรือติดต่อผู้ดูแล');
     window.SPAdvisor.configure({rubric:assessments.find(a=>a.id==='advisor'),read:action=>api(action,{idToken:token}),write:advisorPost});
     window.SPProgress.configure({rubric:assessments.find(a=>a.id==='progress'),isManager:!!evaluator.isManager,accountKey:evaluator.email.toLowerCase(),read:async action=>{const result=await api(action,{idToken:token});if(result.status==='unauthorized')logout(true);return result;},write:advisorPost});
-    $('progressNav').hidden=!evaluator.isManager;$('progressHistoryLink').hidden=!evaluator.isManager;
+    $('courseSummaryNav').hidden=!evaluator.isManager;$('progressNav').hidden=!evaluator.isManager;$('progressHistoryLink').hidden=!evaluator.isManager;
     if (!students.length && evaluator.isManager && activeView==='overview') activeView='progress';
     if (!students.length && evaluator.advisorCount && activeView==='overview') activeView='advisor';
     loaded = true; populateRooms(); renderAll(); navigate(activeView,{force:true});

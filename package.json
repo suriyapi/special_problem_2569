@@ -3,14 +3,15 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "test": "node --test tests/scoring.test.cjs tests/advisor.test.cjs tests/progress.test.cjs",
+    "test": "node --test tests/scoring.test.cjs tests/advisor.test.cjs tests/progress.test.cjs tests/summary.test.cjs",
     "test:ui": "node tests/ui.browser.cjs && node tests/dashboard.browser.cjs",
     "test:ui:touch": "node tests/ui.browser.cjs --touch",
     "test:questions": "node tests/questions.browser.cjs",
     "test:safari": "node tests/safari-login.browser.cjs",
     "test:charts": "node tests/charts.browser.cjs && node tests/charts.browser.cjs --webkit",
     "test:advisor": "node tests/advisor.browser.cjs && node tests/advisor.browser.cjs --webkit",
-    "test:progress": "node tests/progress.browser.cjs && node tests/progress.browser.cjs --webkit"
+    "test:progress": "node tests/progress.browser.cjs && node tests/progress.browser.cjs --webkit",
+    "test:summary": "node tests/summary.browser.cjs && node tests/summary.browser.cjs --webkit"
   },
   "devDependencies": {
     "playwright": "1.64.1"

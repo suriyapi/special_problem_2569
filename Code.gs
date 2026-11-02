@@ -825,6 +825,7 @@ function doGet(e) {
       return { id: a.id, label: a.label, max: a.max, status: a.status, criteria: a.criteria, rubricVersion: a.rubricVersion };
     }), scaleLabels: SCALE_LABELS });
   }
+  if (action === 'getCourseSummary') return jsonOutput(getCourseSummary(e.parameter.idToken));
   if (action === 'getProgressWorkspace') return jsonOutput(getProgressWorkspace(e.parameter.idToken));
   if (action === 'getAdvisorWorkspace') return jsonOutput(getAdvisorWorkspace(e.parameter.idToken));
   if (action === 'getMyWorkspace') {
@@ -1771,4 +1772,73 @@ function setupProgressSheets() {
     if(sheet.getDataRange().getValues().length===1){const plan=progressDefaultPlan_();sheet.appendRow([new Date(),plan.title,'',plan.expectations,1,PROGRESS_MANAGER_EMAIL]);}
     SpreadsheetApp.flush();
   }finally{lock.releaseLock();}
+}
+
+/** สรุป 100 คะแนนแบบอ่านอย่างเดียว: เฉพาะผู้จัดการรายวิชา */
+function getCourseSummary(idToken) {
+  const auth=verifyProgressManager_(idToken);
+  if(!auth.ok)return {status:'unauthorized',message:'เฉพาะผู้จัดการรายวิชา suriya.p@ku.th เท่านั้น'};
+  try{return buildCourseSummary_();}catch(error){return {status:'error',message:error.message};}
+}
+function courseScoreNumber_(value,max) {
+  if(typeof value!=='number'&&typeof value!=='string')return null;
+  if(typeof value==='string'&&!/^\d+(?:\.\d+)?$/.test(value.trim()))return null;
+  const n=Number(value);return Number.isFinite(n)&&n>=0&&n<=max?n:null;
+}
+function courseValidateScore_(section,row) {
+  const assessment=getAssessment(section),total=courseScoreNumber_(row[11],assessment.max);
+  if(total===null)return {valid:false,reason:'คะแนนรวมว่างหรืออยู่นอกช่วง'};
+  const version=String(row[13] || '');let calculated;
+  if(section==='proposal'||section==='defense'&&(!version||version==='defense-v1')) {
+    let sum=0;
+    for(let i=0;i<assessment.criteria.length;i++){const raw=courseScoreNumber_(row[6+i],4);if(raw===null)return {valid:false,reason:'รายละเอียดคะแนนเดิมไม่ครบ'};sum+=raw/4*assessment.criteria[i].weight;}
+    calculated=Math.round(sum*100)/100;
+  }else{
+    if(version!==assessment.rubricVersion)return {valid:false,reason:'ไม่รู้จักเวอร์ชันเกณฑ์'};
+    const answers={};assessment.criteria.reduce(function(all,c){return all.concat(c.questions);},[]).forEach(function(q,i){answers[q.key]=row[14+i];});
+    try{calculated=section==='advisor'?validateAdvisorAnswers_(answers,false).total:section==='progress'?validateProgressAnswers_(answers,false).total:calculateDefenseScores_(answers).total;}catch(error){return {valid:false,reason:'รายละเอียดคะแนนย่อยไม่ครบหรือไม่ถูกต้อง'};}
+  }
+  if(Math.abs(calculated-total)>0.005)return {valid:false,reason:'คะแนนรวมไม่ตรงกับรายละเอียดคะแนน'};
+  return {valid:true,total:total};
+}
+function buildCourseSummary_() {
+  const sections=['proposal','advisor','progress','defense'].map(function(id){const a=getAssessment(id);return {id:id,label:a.label,max:a.max};});
+  if(sections.reduce(function(sum,a){return sum+a.max;},0)!==100)throw new Error('สัดส่วนคะแนนรายวิชาไม่รวมเป็น 100');
+  const ss=getSS(),studentSheet=ss.getSheetByName('Students');if(!studentSheet)throw new Error('ไม่พบชีท Students');
+  const rows=studentSheet.getDataRange().getValues(),students=[],byId=Object.create(null),duplicates=[];
+  rows.slice(1).forEach(function(r){const id=String(r[0] || '').trim();if(!id)return;if(byId[id]){if(duplicates.indexOf(id)<0)duplicates.push(id);return;}const s={id:id,name:String(r[1] || ''),room:r[2],term:r[3],advisor:String(r[4] || ''),topic:String(r[5] || ''),sections:{}};students.push(s);byId[id]=s;});
+  const committeeSheet=ss.getSheetByName('Committees'),committees=committeeSheet?committeeSheet.getDataRange().getValues().slice(1):[];
+  const names=Object.create(null),rooms=Object.create(null);
+  committees.forEach(function(r){const name=String(r[2] || '').trim(),email=String(r[3] || '').trim().toLowerCase();if(!name||!email)return;if(!names[name])names[name]=Object.create(null);names[name][email]=true;});
+  committees.forEach(function(r){const name=String(r[2] || '').trim();if(!name)return;let email=String(r[3] || '').trim().toLowerCase();if(!email&&names[name]&&Object.keys(names[name]).length===1)email=Object.keys(names[name])[0];const key=JSON.stringify([r[0],r[1]]),identity=email?'email:'+email:'name:'+name;if(!rooms[key])rooms[key]=Object.create(null);if(!rooms[key][identity])rooms[key][identity]={key:identity,name:name,email:email,aliases:[]};if(rooms[key][identity].aliases.indexOf(name)<0)rooms[key][identity].aliases.push(name);});
+  const advisors=Object.create(null);advisorAllAssignments_().forEach(function(a){if(!advisors[a.studentId])advisors[a.studentId]=Object.create(null);advisors[a.studentId]['email:'+a.email]={key:'email:'+a.email,name:a.name,email:a.email,aliases:[a.name]};});
+  const orphanRows=[],excludedRows=[];
+  sections.forEach(function(section){
+    const assignmentMap=Object.create(null),latest=Object.create(null);
+    students.forEach(function(s){const roster=section.id==='advisor'?(advisors[s.id]||{}):section.id==='progress'?{'manager':{key:'manager',name:'ผู้จัดการรายวิชา',email:PROGRESS_MANAGER_EMAIL,aliases:[]}}:(rooms[JSON.stringify([s.term,s.room])]||{});assignmentMap[s.id]=roster;latest[s.id]=Object.create(null);});
+    const sheet=ss.getSheetByName(getAssessment(section.id).sheet),data=sheet?sheet.getDataRange().getValues():[];
+    data.slice(1).forEach(function(r,index){
+      const id=String(r[1] || '').trim();if(!id)return;const rowNumber=index+2;
+      if(!byId[id]){orphanRows.push({section:section.id,row:rowNumber});return;}
+      const email=String(r[12] || '').trim().toLowerCase(),name=String(r[5] || '').trim(),roster=Object.keys(assignmentMap[id]).map(function(k){return assignmentMap[id][k];});
+      const matches=email?roster.filter(function(a){return a.email===email;}):(section.id==='proposal'||section.id==='defense'?roster.filter(function(a){return a.aliases.indexOf(name)>=0;}):[]);
+      if(matches.length!==1){excludedRows.push({section:section.id,studentId:id,row:rowNumber,reason:matches.length?'ระบุตัวผู้ประเมินไม่ได้แน่ชัด':'ไม่ตรงกับผู้ประเมินที่ได้รับมอบหมาย'});return;}
+      const identity=matches[0].key,validation=courseValidateScore_(section.id,r),time=new Date(r[0]).getTime();
+      const entry={row:rowNumber,total:validation.valid?validation.total:null,valid:validation.valid,reason:validation.reason||'',time:Number.isFinite(time)?time:null,updatedAt:Number.isFinite(time)?new Date(time).toISOString():'',needsReview:section.id==='defense'&&!email,legacyName:section.id==='proposal'&&!email,superseded:0};
+      const previous=latest[id][identity];
+      if(!previous){latest[id][identity]=entry;return;}
+      const newer=entry.time!==null&&previous.time!==null?entry.time>=previous.time:entry.row>previous.row;
+      if(newer){entry.superseded=previous.superseded+1;latest[id][identity]=entry;}else previous.superseded++;
+    });
+    students.forEach(function(s){
+      const roster=Object.keys(assignmentMap[s.id]).map(function(k){return assignmentMap[s.id][k];}),scores=[],issues=[];
+      const evaluators=roster.map(function(a){const r=latest[s.id][a.key];if(r?.valid)scores.push(r.total);if(r&&!r.valid)issues.push(a.name+': '+r.reason);if(r?.needsReview)issues.push(a.name+': คะแนนสอบวิพากษ์เดิมไม่มีอีเมลยืนยัน');if(r&&r.time===null)issues.push(a.name+': ตรวจสอบเวลาบันทึก');return {name:a.name,email:a.email,score:r?.valid?r.total:null,status:!r?'missing':!r.valid||r.needsReview||r.time===null?'review':'scored',reason:r?.reason||'',updatedAt:r?.updatedAt||'',row:r?.row||null,legacyName:!!r?.legacyName,superseded:r?.superseded||0};});
+      const count=scores.length,expected=roster.length,complete=expected>0&&count===expected&&!issues.length;
+      const average=count?Math.round(scores.reduce(function(sum,v){return sum+v;},0)/count*100)/100:null;
+      s.sections[section.id]={max:section.max,average:average,count:count,expected:expected,complete:complete,status:!expected?'unassigned':issues.length?'review':complete?'complete':count?'partial':'missing',evaluators:evaluators,issues:issues};
+    });
+  });
+  students.forEach(function(s){const parts=sections.map(function(a){return s.sections[a.id];});s.completedSections=parts.filter(function(p){return p.complete;}).length;s.complete=s.completedSections===4;s.status=parts.some(function(p){return p.status==='review';})?'review':parts.some(function(p){return p.status==='unassigned';})?'unassigned':s.complete?'complete':'pending';s.total=s.complete?Math.round(parts.reduce(function(sum,p){return sum+p.average;},0)*100)/100:null;});
+  const complete=students.filter(function(s){return s.complete;}),averageTotal=complete.length?Math.round(complete.reduce(function(sum,s){return sum+s.total;},0)/complete.length*100)/100:null;
+  return {status:'ok',max:100,updatedAt:new Date().toISOString(),sections:sections,students:students,stats:{totalStudents:students.length,completeStudents:complete.length,pendingStudents:students.length-complete.length,reviewStudents:students.filter(function(s){return s.status==='review'||s.status==='unassigned';}).length,averageTotal:averageTotal},bySection:sections.map(function(a){return {id:a.id,label:a.label,max:a.max,complete:students.filter(function(s){return s.sections[a.id].complete;}).length,total:students.length};}),warnings:{duplicateStudentIds:duplicates,orphanRows:orphanRows,excludedRows:excludedRows},rules:'เฉลี่ยคะแนนยืนยันล่าสุดของผู้ประเมินที่ได้รับมอบหมายในแต่ละส่วน แล้วรวม 10 + 50 + 20 + 20 แสดงคะแนนรวมเมื่อผู้ประเมินครบทุกส่วน ไม่รวมคะแนนร่าง'};
 }

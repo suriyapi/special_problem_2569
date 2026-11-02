@@ -10,13 +10,27 @@
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   let menuOpen = false, scrollPosition = 0, overlayTimer;
   let savedBodyStyle = null;
+  let desktopCollapsed=false;
+  try{desktopCollapsed=sessionStorage.getItem('sp_sidebar_collapsed')==='true';}catch{}
+  function syncMenu(){
+    const expanded=compact.matches?menuOpen:!desktopCollapsed;
+    document.body.classList.toggle('nav-collapsed',desktopCollapsed);
+    toggle.setAttribute('aria-expanded',String(expanded));
+    toggle.setAttribute('aria-label',compact.matches?(expanded?'ปิดเมนู':'เปิดเมนู'):(expanded?'ซ่อนเมนู':'แสดงเมนู'));
+    toggle.title=toggle.getAttribute('aria-label');
+    drawer.inert=!expanded;
+  }
+  function toggleDesktop(){
+    desktopCollapsed=!desktopCollapsed;
+    try{sessionStorage.setItem('sp_sidebar_collapsed',String(desktopCollapsed));}catch{}
+    syncMenu();closeSelect();hideTooltip();
+  }
   const focusables = () => [...drawer.querySelectorAll('a[href], button:not(:disabled), [tabindex="0"]')].filter(node => node.getClientRects().length && getComputedStyle(node).visibility !== 'hidden');
   function setMenu(open, returnFocus = true) {
     open = Boolean(open && compact.matches && !document.getElementById('appShell')?.hidden);
-    if (open === menuOpen) return;
+    if (open === menuOpen) {syncMenu();return;}
     menuOpen = open; clearTimeout(overlayTimer);
-    toggle.setAttribute('aria-expanded', String(open));
-    toggle.setAttribute('aria-label', open ? 'ปิดเมนู' : 'เปิดเมนู');
+    syncMenu();
     drawer.classList.toggle('mobile-open', open);
     document.body.classList.toggle('menu-open', open);
     if (open) {
@@ -36,13 +50,15 @@
       if (returnFocus && compact.matches) toggle.focus({preventScroll:true});
     }
   }
-  toggle?.addEventListener('click', () => setMenu(!menuOpen));
+  toggle?.addEventListener('click', () => compact.matches?setMenu(!menuOpen):toggleDesktop());
   overlay?.addEventListener('click', () => setMenu(false));
   closeButton?.addEventListener('click', () => setMenu(false));
-  const onBreakpoint = () => { if (!compact.matches) setMenu(false,false); closeSelect(); };
+  const onBreakpoint = () => { if (menuOpen) setMenu(false,false); syncMenu();closeSelect(); };
   if (typeof compact.addEventListener === 'function') compact.addEventListener('change', onBreakpoint);
   else if (typeof compact.addListener === 'function') compact.addListener(onBreakpoint);
-  window.addEventListener('resize',()=>{if(menuOpen&&!compact.matches)setMenu(false,false);});
+  window.addEventListener('resize',()=>{if(menuOpen&&!compact.matches)setMenu(false,false);syncMenu();});
+  drawer.addEventListener('click',event=>{if(compact.matches&&event.target.closest('a[href]'))setMenu(false);});
+  syncMenu();
   document.addEventListener('keydown', event => {
     if (!menuOpen) return;
     if (event.key === 'Escape') { event.preventDefault(); setMenu(false); }
@@ -179,7 +195,7 @@
     if(menuOpen)setMenu(false,false);
     menuOpen=false;clearTimeout(overlayTimer);main.inert=false;
     drawer.classList.remove('mobile-open');drawer.removeAttribute('role');drawer.removeAttribute('aria-modal');
-    toggle.setAttribute('aria-expanded','false');toggle.setAttribute('aria-label','เปิดเมนู');
+    syncMenu();
     overlay.hidden=true;overlay.inert=true;overlay.classList.remove('is-visible');
     if(document.body.classList.contains('menu-open')){document.body.style.position='';document.body.style.top='';document.body.style.width='';document.body.style.overflow='';}
     document.body.classList.remove('menu-open');closeSelect();hideTooltip();

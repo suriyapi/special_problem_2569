@@ -36,9 +36,9 @@ input, select, textarea, .select-trigger { font-size: 14px; }
 .hamburger-lines > span:nth-child(1) { top: 1px; }
 .hamburger-lines > span:nth-child(2) { top: 8px; }
 .hamburger-lines > span:nth-child(3) { top: 15px; }
-#menuToggle[aria-expanded="true"] .hamburger-lines > span:nth-child(1) { top: 8px; transform: rotate(45deg); }
-#menuToggle[aria-expanded="true"] .hamburger-lines > span:nth-child(2) { opacity: 0; transform: translateX(-7px); }
-#menuToggle[aria-expanded="true"] .hamburger-lines > span:nth-child(3) { top: 8px; transform: rotate(-45deg); }
+.menu-open #menuToggle[aria-expanded="true"] .hamburger-lines > span:nth-child(1) { top: 8px; transform: rotate(45deg); }
+.menu-open #menuToggle[aria-expanded="true"] .hamburger-lines > span:nth-child(2) { opacity: 0; transform: translateX(-7px); }
+.menu-open #menuToggle[aria-expanded="true"] .hamburger-lines > span:nth-child(3) { top: 8px; transform: rotate(-45deg); }
 /* A single accessible listbox replaces OS-dependent select menu typography. */
 .custom-select { position: relative; display: inline-block; width: 100%; min-width: 0; }
 .select-trigger {
@@ -281,3 +281,16 @@ input, select, textarea, .select-trigger { font-size: 14px; }
 .chart-text-button{font-size:12px;font-weight:600;line-height:1.7}
 .chart-hint{font-size:11px;color:#64748b;line-height:1.8;margin:0 0 18px}
 .dashboard-grid>.card>h2:has(+.chart-hint){margin-bottom:8px}
+
+/* Menu control is available on every screen size. Desktop keeps a collapsible sidebar. */
+#menuToggle{display:inline-flex;flex-shrink:0;align-items:center;justify-content:center;gap:9px;min-width:44px;min-height:44px;border:1px solid #e2e8f0;border-radius:10px;background:#fff;padding:10px 12px;color:#334155}
+.menu-toggle-label{font-size:12px;font-weight:600;white-space:nowrap}
+#menuToggle:focus-visible{outline:3px solid #05966955;outline-offset:3px}
+@media(min-width:1101px){
+  .sidebar{transition:transform var(--motion-normal) var(--motion-ease),visibility 0s;transform:translateX(0)}
+  .app-main{transition:margin-left var(--motion-normal) var(--motion-ease)}
+  body.nav-collapsed .sidebar{transform:translateX(-102%);visibility:hidden;pointer-events:none;transition:transform var(--motion-normal) var(--motion-ease),visibility 0s linear var(--motion-normal)}
+  body.nav-collapsed .app-main{margin-left:0}
+}
+@media(max-width:480px){.menu-toggle-label{display:none}#menuToggle{padding:10px;min-width:44px}.summary-shell .topbar-right>.badge,.admin-shell .topbar-right>.badge{display:none}}
+@media(prefers-reduced-motion:reduce){.sidebar,.app-main{transition:none!important}}

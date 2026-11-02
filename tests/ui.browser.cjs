@@ -18,7 +18,8 @@ await page.route('https://script.google.com/**',r=>{const request=r.request(),ac
 await page.goto('http://scoring.test/');await page.waitForFunction(()=>window.testLogin);await page.evaluate(()=>testLogin({credential:'token'}));await page.locator('#view-overview').waitFor({state:'visible'});
 for(const width of [1440,1180,1101,1100,1024,834,820,768,600,430,390,375,320]){
   await page.setViewportSize({width,height:900});
-  assert.equal(await page.locator('#menuToggle').isVisible(),width<=1100,'Hamburger breakpoint '+width);
+  assert.equal(await page.locator('#menuToggle').isVisible(),true,'Hamburger available '+width);
+  if(width>1100){await page.locator('#menuToggle').click();assert.equal(await page.locator('#menuToggle').getAttribute('aria-expanded'),'false');assert.equal(await page.locator('#sidebar').evaluate(n=>n.inert),true);assert.equal(await page.locator('.app-main').evaluate(n=>n.inert),false);await page.waitForFunction(()=>getComputedStyle(document.querySelector('.app-main')).marginLeft==='0px');await page.locator('#menuToggle').click();assert.equal(await page.locator('#menuToggle').getAttribute('aria-expanded'),'true');}
   for(const route of ['overview','students','history','guide']){
     await page.evaluate(route=>location.hash=route,route);await page.locator('#view-'+route).waitFor({state:'visible'});
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'No page overflow '+route+' '+width);

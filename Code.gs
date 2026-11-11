@@ -856,7 +856,7 @@ function doGet(e) {
 function doPost(e) {
   try {
     const payload = JSON.parse(e.postData.contents);
-    const result = payload.assessment === 'progress' ? submitProgress(payload) : payload.assessment === 'advisor' ? submitAdvisor(payload) : submitScore(payload);
+    const result = payload.action === 'saveProposalDeadline' || payload.action === 'decideProposalException' ? submitProposalClosure(payload) : payload.assessment === 'progress' ? submitProgress(payload) : payload.assessment === 'advisor' ? submitAdvisor(payload) : submitScore(payload);
     return jsonOutput(result);
   } catch (err) {
     return jsonOutput({ status: 'error', message: err.message });
@@ -1774,7 +1774,7 @@ function setupProgressSheets() {
   }finally{lock.releaseLock();}
 }
 
-/** สรุป 100 คะแนนแบบอ่านอย่างเดียว: เฉพาะผู้จัดการรายวิชา */
+/** อ่านสรุป 100 คะแนน: เฉพาะผู้จัดการรายวิชา */
 function getCourseSummary(idToken) {
   const auth=verifyProgressManager_(idToken);
   if(!auth.ok)return {status:'unauthorized',message:'เฉพาะผู้จัดการรายวิชา suriya.p@ku.th เท่านั้น'};
@@ -1812,7 +1812,7 @@ function buildCourseSummary_() {
   committees.forEach(function(r){const name=String(r[2] || '').trim(),email=String(r[3] || '').trim().toLowerCase();if(!name||!email)return;if(!names[name])names[name]=Object.create(null);names[name][email]=true;});
   committees.forEach(function(r){const name=String(r[2] || '').trim();if(!name)return;let email=String(r[3] || '').trim().toLowerCase();if(!email&&names[name]&&Object.keys(names[name]).length===1)email=Object.keys(names[name])[0];const key=JSON.stringify([r[0],r[1]]),identity=email?'email:'+email:'name:'+name;if(!rooms[key])rooms[key]=Object.create(null);if(!rooms[key][identity])rooms[key][identity]={key:identity,name:name,email:email,aliases:[]};if(rooms[key][identity].aliases.indexOf(name)<0)rooms[key][identity].aliases.push(name);});
   const advisors=Object.create(null);advisorAllAssignments_().forEach(function(a){if(!advisors[a.studentId])advisors[a.studentId]=Object.create(null);advisors[a.studentId]['email:'+a.email]={key:'email:'+a.email,name:a.name,email:a.email,aliases:[a.name]};});
-  const orphanRows=[],excludedRows=[];
+  const orphanRows=[],excludedRows=[],proposalPolicy=proposalClosurePolicy_(),proposalDecisions=proposalClosureDecisions_();
   sections.forEach(function(section){
     const assignmentMap=Object.create(null),latest=Object.create(null);
     students.forEach(function(s){const roster=section.id==='advisor'?(advisors[s.id]||{}):section.id==='progress'?{'manager':{key:'manager',name:'ผู้จัดการรายวิชา',email:PROGRESS_MANAGER_EMAIL,aliases:[]}}:(rooms[JSON.stringify([s.term,s.room])]||{});assignmentMap[s.id]=roster;latest[s.id]=Object.create(null);});
@@ -1824,7 +1824,7 @@ function buildCourseSummary_() {
       const matches=email?roster.filter(function(a){return a.email===email;}):(section.id==='proposal'||section.id==='defense'?roster.filter(function(a){return a.aliases.indexOf(name)>=0;}):[]);
       if(matches.length!==1){excludedRows.push({section:section.id,studentId:id,row:rowNumber,reason:matches.length?'ระบุตัวผู้ประเมินไม่ได้แน่ชัด':'ไม่ตรงกับผู้ประเมินที่ได้รับมอบหมาย'});return;}
       const identity=matches[0].key,validation=courseValidateScore_(section.id,r),time=new Date(r[0]).getTime();
-      const entry={row:rowNumber,total:validation.valid?validation.total:null,valid:validation.valid,reason:validation.reason||'',time:Number.isFinite(time)?time:null,updatedAt:Number.isFinite(time)?new Date(time).toISOString():'',needsReview:section.id==='defense'&&!email,legacyName:section.id==='proposal'&&!email,superseded:0};
+      const entry={row:rowNumber,total:validation.valid?validation.total:null,valid:validation.valid,reason:validation.reason||'',time:Number.isFinite(time)?time:null,updatedAt:Number.isFinite(time)?new Date(time).toISOString():'',needsReview:section.id==='defense'&&!email,legacyName:section.id==='proposal'&&!email,signature:JSON.stringify(r.slice(0,14)),superseded:0};
       const previous=latest[id][identity];
       if(!previous){latest[id][identity]=entry;return;}
       const newer=entry.time!==null&&previous.time!==null?entry.time>=previous.time:entry.row>previous.row;
@@ -1836,9 +1836,85 @@ function buildCourseSummary_() {
       const count=scores.length,expected=roster.length,complete=expected>0&&count===expected&&!issues.length;
       const average=count?Math.round(scores.reduce(function(sum,v){return sum+v;},0)/count*100)/100:null;
       s.sections[section.id]={max:section.max,average:average,count:count,expected:expected,complete:complete,status:!expected?'unassigned':issues.length?'review':complete?'complete':count?'partial':'missing',evaluators:evaluators,issues:issues};
+      if(section.id==='proposal') {
+        const part=s.sections.proposal;
+        part.basis=JSON.stringify({studentId:s.id,term:s.term,room:s.room,roster:roster.map(function(a){return a.key;}).sort(),scores:roster.map(function(a){const entry=latest[s.id][a.key];return {key:a.key,signature:entry?entry.signature:null};}).sort(function(a,b){return a.key.localeCompare(b.key);})});
+        applyProposalClosure_(part,proposalPolicy,proposalDecisions[s.id]||[]);
+      }
     });
   });
-  students.forEach(function(s){const parts=sections.map(function(a){return s.sections[a.id];});s.completedSections=parts.filter(function(p){return p.complete;}).length;s.complete=s.completedSections===4;s.status=parts.some(function(p){return p.status==='review';})?'review':parts.some(function(p){return p.status==='unassigned';})?'unassigned':s.complete?'complete':'pending';s.total=s.complete?Math.round(parts.reduce(function(sum,p){return sum+p.average;},0)*100)/100:null;});
+  students.forEach(function(s){const parts=sections.map(function(a){return s.sections[a.id];});s.completedSections=parts.filter(function(p){return p.complete;}).length;s.complete=s.completedSections===4;s.status=parts.some(function(p){return p.status==='review';})?'review':parts.some(function(p){return p.status==='unassigned';})?'unassigned':s.complete?(parts.some(function(p){return p.status==='approved';})?'approved':'complete'):'pending';s.total=s.complete?Math.round(parts.reduce(function(sum,p){return sum+p.average;},0)*100)/100:null;});
   const complete=students.filter(function(s){return s.complete;}),averageTotal=complete.length?Math.round(complete.reduce(function(sum,s){return sum+s.total;},0)/complete.length*100)/100:null;
-  return {status:'ok',max:100,updatedAt:new Date().toISOString(),sections:sections,students:students,stats:{totalStudents:students.length,completeStudents:complete.length,pendingStudents:students.length-complete.length,reviewStudents:students.filter(function(s){return s.status==='review'||s.status==='unassigned';}).length,averageTotal:averageTotal},bySection:sections.map(function(a){return {id:a.id,label:a.label,max:a.max,complete:students.filter(function(s){return s.sections[a.id].complete;}).length,total:students.length};}),warnings:{duplicateStudentIds:duplicates,orphanRows:orphanRows,excludedRows:excludedRows},rules:'เฉลี่ยคะแนนยืนยันล่าสุดของผู้ประเมินที่ได้รับมอบหมายในแต่ละส่วน แล้วรวม 10 + 50 + 20 + 20 แสดงคะแนนรวมเมื่อผู้ประเมินครบทุกส่วน ไม่รวมคะแนนร่าง'};
+  return {status:'ok',max:100,updatedAt:new Date().toISOString(),sections:sections,students:students,proposalPolicy:proposalPolicy,stats:{exceptionStudents:students.filter(function(s){return s.sections.proposal.status==='approved';}).length,totalStudents:students.length,completeStudents:complete.length,pendingStudents:students.length-complete.length,reviewStudents:students.filter(function(s){return s.status==='review'||s.status==='unassigned';}).length,averageTotal:averageTotal},bySection:sections.map(function(a){return {id:a.id,label:a.label,max:a.max,approved:students.filter(function(s){return s.sections[a.id].status==='approved';}).length,complete:students.filter(function(s){return s.sections[a.id].complete;}).length,total:students.length};}),warnings:{duplicateStudentIds:duplicates,orphanRows:orphanRows,excludedRows:excludedRows},rules:'เฉลี่ยคะแนนยืนยันล่าสุดของผู้ประเมินที่ได้รับมอบหมายในแต่ละส่วน แล้วรวม 10 + 50 + 20 + 20 แสดงคะแนนรวมเมื่อทุกส่วนครบหรือหัวข้อได้รับอนุมัติข้อยกเว้น 2/3 คนหลังหมดกำหนด ไม่รวมคะแนนร่าง'};
+}
+
+/** ข้อยกเว้นหัวข้อ: ผู้จัดการอนุมัติเป็นรายนิสิตเฉพาะ 2/3 คนหลังสิ้นกำหนด */
+function proposalClosurePolicyHeaders_(){return ['Timestamp','วันสิ้นสุดประเมินหัวข้อ (เวลาไทย)','เวอร์ชันกำหนด','อีเมลผู้จัดการรายวิชา','หมายเหตุกำหนด'];}
+function proposalClosureDecisionHeaders_(){return ['รหัสการตัดสินใจ','Timestamp','ส่วนประเมิน','รหัสนิสิต','อีเมลผู้จัดการรายวิชา','การตัดสินใจ','เหตุผล','เวอร์ชันกำหนด','รายละเอียดประกอบ JSON','คะแนนเฉลี่ยที่อนุมัติ','รหัสคำขอ'];}
+function proposalDeadlineState_(deadline,revision,note,updatedAt){
+  const end=deadline?new Date(deadline+'T23:59:59.999+07:00').getTime():NaN;
+  return {deadline:deadline,revision:revision,note:note||'',updatedAt:updatedAt||'',expired:Number.isFinite(end)&&Date.now()>end,endsAt:Number.isFinite(end)?new Date(end).toISOString():null};
+}
+function proposalClosurePolicy_(){
+  const sheet=getSS().getSheetByName('ProposalClosurePolicy');
+  const rows=sheet?sheet.getDataRange().getValues().slice(1):[];
+  const own=rows.filter(function(r){return String(r[3]||'').trim().toLowerCase()===PROGRESS_MANAGER_EMAIL.toLowerCase();}).sort(function(a,b){return Number(a[2])-Number(b[2]);});
+  if(!own.length)return proposalDeadlineState_('',0,'','');
+  const r=own[own.length-1],deadline=r[1] instanceof Date?Utilities.formatDate(r[1],'Asia/Bangkok','yyyy-MM-dd'):String(r[1]||'');
+  return proposalDeadlineState_(deadline,Number(r[2]),String(r[4]||''),advisorTime_(r[0]));
+}
+function proposalClosureDecisions_(){
+  const sheet=getSS().getSheetByName('ProposalClosureDecisions'),map=Object.create(null);
+  if(!sheet)return map;
+  sheet.getDataRange().getValues().slice(1).forEach(function(r,index){
+    const id=String(r[3]||'').trim();if(!id||r[2]!=='proposal'||String(r[4]||'').trim().toLowerCase()!==PROGRESS_MANAGER_EMAIL.toLowerCase())return;
+    let snapshot=null;try{snapshot=JSON.parse(r[8]);}catch(error){}
+    const decision={id:String(r[0]||''),updatedAt:advisorTime_(r[1]),action:String(r[5]||''),reason:String(r[6]||''),policyRevision:Number(r[7]),managerEmail:String(r[4]),snapshot:snapshot,approvedAverage:r[9]===''?null:Number(r[9]),requestId:String(r[10]||''),sequence:index};
+    if(!map[id])map[id]=[];map[id].push(decision);
+  });Object.keys(map).forEach(function(id){map[id].sort(function(a,b){const first=Date.parse(a.updatedAt),second=Date.parse(b.updatedAt);return Number.isFinite(first)&&Number.isFinite(second)&&first!==second?first-second:a.sequence-b.sequence;});map[id].forEach(function(d){delete d.sequence;});});return map;
+}
+function applyProposalClosure_(part,policy,history){
+  part.actualComplete=part.complete;part.decisionHistory=history;part.closureEligible=part.expected===3&&part.count===2&&!part.issues.length;
+  part.canApprove=part.closureEligible&&policy.expired;
+  const latest=history.length?history[history.length-1]:null;part.exception=latest?{id:latest.id,updatedAt:latest.updatedAt,action:latest.action,reason:latest.reason,managerEmail:latest.managerEmail,approvedAverage:latest.approvedAverage,state:'inactive'}:null;
+  if(!latest)return;
+  if(latest.action==='revoke'){part.exception.state='revoked';return;}
+  if(part.actualComplete){part.exception.state='superseded';part.canApprove=false;return;}
+  const applicable=latest.action==='approve'&&!!latest.reason.trim()&&Number.isFinite(Date.parse(latest.updatedAt))&&part.closureEligible&&policy.expired&&latest.policyRevision===policy.revision&&latest.snapshot&&latest.snapshot.basis===part.basis&&Math.abs(latest.approvedAverage-part.average)<0.005;
+  if(applicable){part.complete=true;part.status='approved';part.exception.state='active';part.canApprove=false;}else{part.exception.state='stale';part.status='review';}
+}
+function submitProposalClosure(payload){
+  const auth=verifyProgressManager_(payload.idToken);
+  if(!auth.ok)return {status:'unauthorized',message:'เฉพาะผู้จัดการรายวิชา suriya.p@ku.th เท่านั้น'};
+  const lock=LockService.getScriptLock();lock.waitLock(30000);
+  try{
+    const policy=proposalClosurePolicy_();
+    if(payload.action==='saveProposalDeadline'){
+      if(payload.policyRevision!==policy.revision)throw new Error('กำหนดประเมินถูกแก้ไขแล้ว กรุณารีเฟรชก่อนบันทึก');
+      const deadline=advisorDate_(payload.deadline,true),note=advisorText_(payload.note,2000),sheet=advisorSheet_('ProposalClosurePolicy',proposalClosurePolicyHeaders_()),time=new Date();
+      if(deadline===policy.deadline&&note===policy.note)return {status:'updated',policy:policy};
+      sheet.appendRow([time,deadline,policy.revision+1,PROGRESS_MANAGER_EMAIL,advisorCell_(note)]);SpreadsheetApp.flush();
+      return {status:'updated',policy:proposalDeadlineState_(deadline,policy.revision+1,note,time.toISOString())};
+    }
+    if(payload.action!=='decideProposalException'||payload.assessment!=='proposal'||['approve','revoke'].indexOf(payload.decision)<0)throw new Error('คำสั่งปิดคะแนนหัวข้อไม่ถูกต้อง');
+    const studentId=advisorText_(payload.studentId,80),reason=advisorText_(payload.reason,2000),requestId=advisorText_(payload.requestId,80);
+    if(!reason)throw new Error('กรุณาระบุเหตุผลประกอบการตัดสินใจ');
+    if(!/^[a-zA-Z0-9_-]{8,80}$/.test(requestId))throw new Error('รหัสคำขอไม่ถูกต้อง');
+    const history=proposalClosureDecisions_(),all=Object.keys(history).reduce(function(out,id){return out.concat(history[id].map(function(d){return {studentId:id,decision:d};}));},[]),retry=all.find(function(r){return r.decision.requestId===requestId;});
+    if(retry){if(retry.studentId!==studentId||retry.decision.action!==payload.decision||retry.decision.reason!==reason)throw new Error('รหัสคำขอถูกใช้กับข้อมูลอื่นแล้ว กรุณาเปิดรายการใหม่');return {status:'updated',decisionId:retry.decision.id};}
+    const summary=buildCourseSummary_(),student=summary.students.find(function(s){return s.id===studentId;});if(!student)throw new Error('ไม่พบนิสิต');
+    const part=student.sections.proposal;
+    if(payload.policyRevision!==policy.revision||payload.basis!==part.basis)throw new Error('คะแนนหรือการมอบหมายเปลี่ยนแล้ว กรุณารีเฟรชและตรวจสอบก่อนยืนยัน');
+    const latest=part.decisionHistory.length?part.decisionHistory[part.decisionHistory.length-1]:null;
+    if((payload.lastDecisionId||'')!==(latest?.id||''))throw new Error('มีการตัดสินใจจากอีกแท็บแล้ว กรุณารีเฟรช');
+    if(payload.decision==='approve'){
+      if(!policy.deadline||!policy.expired)throw new Error('อนุมัติได้หลังสิ้นวันหมดกำหนดตามเวลาไทยเท่านั้น');
+      if(!part.closureEligible)throw new Error('อนุมัติได้เฉพาะหัวข้อที่มีคะแนนถูกต้อง 2 จากกรรมการ 3 คน และไม่มีรายการต้องตรวจสอบ');
+      if(part.exception?.state==='active')throw new Error('รายการนี้ได้รับอนุมัติแล้ว');
+    }else if(!latest||latest.action!=='approve')throw new Error('ไม่พบข้อยกเว้นที่เพิกถอนได้');
+    const sheet=advisorSheet_('ProposalClosureDecisions',proposalClosureDecisionHeaders_()),decisionId=Utilities.getUuid(),time=new Date();
+    const snapshot={basis:part.basis,deadline:policy.deadline,policyRevision:policy.revision,count:part.count,expected:part.expected,average:part.average,evaluators:part.evaluators};
+    sheet.appendRow([decisionId,time,'proposal',studentId,PROGRESS_MANAGER_EMAIL,payload.decision,advisorCell_(reason),policy.revision,JSON.stringify(snapshot),payload.decision==='approve'?part.average:'',requestId]);SpreadsheetApp.flush();
+    return {status:'created',decisionId:decisionId};
+  }finally{lock.releaseLock();}
 }
